@@ -166,20 +166,9 @@ export async function POST(req: NextRequest) {
       );
     } catch (dbErr) {
       console.error('DB error in vial-batches POST:', dbErr);
-      // Return success in demo mode (no live DB) with mock vial IDs
-      const mockVialIds = body.vials.map((_, i) => `mock-vial-${Date.now()}-${i}`);
       return NextResponse.json(
-        {
-          success: true,
-          patientId: body.patientId,
-          vialIds: mockVialIds,
-          warnings: [
-            ...(glycerinWarning ? [glycerinWarning] : []),
-            ...mixWarnings,
-          ],
-          demo: true,
-        },
-        { status: 201 }
+        { error: 'Failed to create vial batch in the database. Please try again.' },
+        { status: 500 }
       );
     }
   } catch (err) {

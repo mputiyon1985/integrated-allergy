@@ -88,18 +88,8 @@ export async function GET() {
       },
       activity,
     });
-  } catch {
-    return NextResponse.json({
-      stats: {
-        totalPatients: 0,
-        activeTreatments: 0,
-        vialsExpiringSoon: 0,
-        dosesThisWeek: 0,
-        shotsToday: 0,
-        testsToday: 0,
-        evalsToday: 0,
-      },
-      activity: [],
-    });
+  } catch (err) {
+    console.error('Dashboard API error:', err);
+    return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 });
   }
 }

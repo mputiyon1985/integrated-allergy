@@ -14,17 +14,6 @@ interface Patient {
   patientId: string;
 }
 
-const MOCK_PATIENTS: Patient[] = [
-  { id: '1', patientId: 'PA-001', name: 'Johnson, Sarah M.', dob: '1985-04-12', physician: 'Dr. Patel', diagnosis: 'Allergic Rhinitis', status: 'Build-Up' },
-  { id: '2', patientId: 'PA-002', name: 'Williams, Robert K.', dob: '1972-09-28', physician: 'Dr. Thompson', diagnosis: 'Asthma + AR', status: 'Maintenance' },
-  { id: '3', patientId: 'PA-003', name: 'Martinez, Elena', dob: '1990-01-15', physician: 'Dr. Patel', diagnosis: 'Allergic Rhinitis', status: 'Build-Up' },
-  { id: '4', patientId: 'PA-004', name: 'Davis, Michael T.', dob: '1968-07-03', physician: 'Dr. Thompson', diagnosis: 'AR + Eczema', status: 'Maintenance' },
-  { id: '5', patientId: 'PA-005', name: 'Anderson, Lisa R.', dob: '1995-11-22', physician: 'Dr. Patel', diagnosis: 'Allergic Rhinitis', status: 'Build-Up' },
-  { id: '6', patientId: 'PA-006', name: 'Brown, James A.', dob: '1960-03-30', physician: 'Dr. Kim', diagnosis: 'Asthma', status: 'Maintenance' },
-  { id: '7', patientId: 'PA-007', name: 'Wilson, Nancy J.', dob: '1988-06-14', physician: 'Dr. Thompson', diagnosis: 'Allergic Rhinitis', status: 'Complete' },
-  { id: '8', patientId: 'PA-008', name: 'Taylor, David L.', dob: '1975-12-08', physician: 'Dr. Patel', diagnosis: 'AR + Asthma', status: 'Inactive' },
-];
-
 const statusClass: Record<string, string> = {
   'Build-Up': 'badge badge-buildup',
   'Maintenance': 'badge badge-maintenance',
@@ -47,10 +36,10 @@ export default function PatientsPage() {
           const data = await res.json();
           setPatients(data.patients || data);
         } else {
-          setPatients(MOCK_PATIENTS);
+          setError('Failed to load patients from the database.');
         }
       } catch {
-        setPatients(MOCK_PATIENTS);
+        setError('Network error — could not reach the database.');
       } finally {
         setLoading(false);
       }
@@ -146,8 +135,10 @@ export default function PatientsPage() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>
-                        No patients found.
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                        {search.trim()
+                          ? 'No patients match your search.'
+                          : 'No patients found — add your first patient.'}
                       </td>
                     </tr>
                   ) : (
