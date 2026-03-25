@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
+    "@prisma/adapter-libsql": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@tanstack/react-table": "^8.21.3",
     "jspdf": "^4.2.1",

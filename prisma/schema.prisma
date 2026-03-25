@@ -1,7 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Integrated Allergy IMS - Prisma Schema
+// https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +8,88 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+model Patient {
+  id              String   @id @default(cuid())
+  name            String
+  dob             DateTime
+  patientId       String   @unique
+  physician       String
+  clinicLocation  String
+  diagnosis       String
+  startDate       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  allergenMixes   AllergenMix[]
+  vials           Vial[]
+  dosingSchedules DosingSchedule[]
+  auditLogs       AuditLog[]
+}
+
+model Allergen {
+  id           String    @id @default(cuid())
+  name         String
+  type         String    // mold, pollen, dust, animal, food, insect
+  manufacturer String?
+  lotNumber    String?
+  stockConc    String?   // e.g. "1:10"
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  mixes        AllergenMix[]
+}
+
+model AllergenMix {
+  id         String  @id @default(cuid())
+  patientId  String
+  allergenId String
+  volumeMl   Float
+
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  allergen   Allergen @relation(fields: [allergenId], references: [id])
+}
+
+model Vial {
+  id              String    @id @default(cuid())
+  patientId       String
+  vialNumber      Int       // 1-4
+  dilutionRatio   String    // e.g. "1:10000"
+  totalVolumeMl   Float
+  glycerinPercent Float
+  colorCode       String    // silver, blue, yellow, red
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  doses           DosingSchedule[]
+}
+
+model DosingSchedule {
+  id             String    @id @default(cuid())
+  patientId      String
+  vialId         String
+  weekNumber     Int
+  doseMl         Float
+  phase          String    // buildup, maintenance
+  reaction       String?
+  notes          String?
+  administered   Boolean   @default(false)
+  administeredAt DateTime?
+
+  patient        Patient @relation(fields: [patientId], references: [id])
+  vial           Vial    @relation(fields: [vialId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  patientId String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  patient   Patient? @relation(fields: [patientId], references: [id])
 }
