@@ -46,7 +46,7 @@ const DURATION_OPTIONS = [
   { label: '1 hour', minutes: 60 },
 ];
 
-const PROVIDERS = ['Dr. Patel', 'Dr. Thompson', 'Dr. Kim', 'Dr. Rivera', 'Dr. Chen', 'Nurse Chen', 'Nurse Kim'];
+
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -90,6 +90,7 @@ export default function CalendarPage() {
   const [typeFilter, setTypeFilter]       = useState<ApptType>('all');
   const [appointments, setAppointments]   = useState<Appointment[]>([]);
   const [patients, setPatients]           = useState<Patient[]>([]);
+  const [doctors, setDoctors]               = useState<Array<{id: string; name: string; title: string}>>([]);
   const [loading, setLoading]             = useState(true);
 
   // Modal state
@@ -119,6 +120,14 @@ export default function CalendarPage() {
     fetch('/api/patients')
       .then((r) => r.json())
       .then((d) => setPatients(d.patients ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Load doctors
+  useEffect(() => {
+    fetch('/api/doctors?active=true')
+      .then((r) => r.json())
+      .then((d) => setDoctors(d.doctors ?? []))
       .catch(() => {});
   }, []);
 
@@ -401,7 +410,10 @@ export default function CalendarPage() {
                 <label className="form-label">Provider / Staff</label>
                 <select className="form-input" value={form.provider} onChange={(e) => setField('provider', e.target.value)}>
                   <option value="">Select provider…</option>
-                  {PROVIDERS.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {doctors.length > 0
+                    ? doctors.map((d) => <option key={d.id} value={`${d.title} ${d.name}`}>{d.title} {d.name}</option>)
+                    : <option disabled>No active doctors — add one first</option>
+                  }
                 </select>
               </div>
 
