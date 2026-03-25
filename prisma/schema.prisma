@@ -26,6 +26,7 @@ model Patient {
   vials           Vial[]
   dosingSchedules DosingSchedule[]
   auditLogs       AuditLog[]
+  appointments    Appointment[]
 }
 
 model Allergen {
@@ -92,4 +93,20 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   patient   Patient? @relation(fields: [patientId], references: [id])
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  patientId   String
+  type        String   // shot, skin_test, evaluation, follow_up, other
+  title       String
+  startTime   DateTime
+  endTime     DateTime
+  provider    String?
+  notes       String?
+  status      String   @default("scheduled") // scheduled, confirmed, completed, cancelled, no_show
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient     Patient  @relation(fields: [patientId], references: [id])
 }

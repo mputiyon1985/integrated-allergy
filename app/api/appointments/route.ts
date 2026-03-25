@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/db';
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const patientId = searchParams.get('patientId');
+    const from      = searchParams.get('from');
+    const to        = searchParams.get('to');
+    const type      = searchParams.get('type');
+
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        ...(patientId && { patientId }),
+        ...(type      && { type }),
+        ...(from || to
+          ? {
+              startTime: {
+                ...(from && { gte: new Date(from) }),
+                ...(to   && { lte: new Date(to)   }),
+              },
+            }
+          : {}),
+      },
+      orderBy: { startTime: 'asc' },
+      include: { patient: { select: { id: true, name: true, patientId: true } } },
+    });
+
+    return NextResponse.json({ appointments });
+  } catch (err) {
+    console.error('GET /api/appointments error:', err);
+    return NextResponse.json({ appointments: [] });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json() as {
+      patientId: string;
+      type: string;
+      title: string;
+      startTime: string;
+      endTime: string;
+      provider?: string;
+      notes?: string;
+      status?: string;
+    };
+
+    if (!body.patientId || !body.type || !body.title || !body.startTime || !body.endTime) {
+      return NextResponse.json(
+        { error: 'patientId, type, title, startTime, endTime are required' },
+        { status: 400 }
+      );
+    }
+
+    const appt = await prisma.appointment.create({
+      data: {
+        patientId: body.patientId,
+        type:      body.type,
+        title:     body.title,
+        startTime: new Date(body.startTime),
+        endTime:   new Date(body.endTime),
+        provider:  body.provider  ?? null,
+        notes:     body.notes     ?? null,
+        status:    body.status    ?? 'scheduled',
+      },
+      include: { patient: { select: { id: true, name: true, patientId: true } } },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        patientId: body.patientId,
+        action:    'Appointment Created',
+        entity:    'Appointment',
+        entityId:  appt.id,
+        details:   `${body.type} — ${body.title} at ${new Date(body.startTime).toISOString()}`,
+      },
+    });
+
+    return NextResponse.json({ appointment: appt }, { status: 201 });
+  } catch (err) {
+    console.error('POST /api/appointments error:', err);
+    return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 });
+  }
+}

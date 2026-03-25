@@ -1,0 +1,523 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import TopBar from '@/components/layout/TopBar';
+import VialCard from '@/components/clinical/VialCard';
+import SafetyAlert from '@/components/clinical/SafetyAlert';
+import DosingTable, { DosingRow } from '@/components/clinical/DosingTable';
+import { type VialColor } from '@/lib/ui/theme';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface PatientDetail {
+  id: string;
+  patientId: string;
+  firstName: string;
+  lastName: string;
+  dob: string;
+  physician: string;
+  clinicLocation: string;
+  diagnosis: string;
+  startDate: string;
+  status: string;
+  phone?: string;
+  email?: string;
+  insuranceId?: string;
+  notes?: string;
+}
+
+interface AllergenMixItem {
+  id: string;
+  name: string;
+  type: string;
+  concentration: string;
+  volume: number;
+  warning?: string;
+}
+
+interface Vial {
+  id: string;
+  vialNumber: number;
+  color: VialColor;
+  dilutionRatio: string;
+  volume: number;
+  expiry: string;
+  status: 'Active' | 'Expired' | 'Depleted' | 'Pending';
+}
+
+interface AuditEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  user: string;
+  details: string;
+}
+
+interface Appointment {
+  id: string;
+  type: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  provider: string | null;
+  status: string;
+  notes: string | null;
+}
+
+function isVialColor(s: string): s is VialColor {
+  return ['silver', 'blue', 'yellow', 'red'].includes(s);
+}
+
+const APPT_TYPE_CONFIG: Record<string, { emoji: string; color: string; bg: string }> = {
+  shot:       { emoji: '💉', color: '#1565c0', bg: '#e3f2fd' },
+  skin_test:  { emoji: '🧪', color: '#2e7d32', bg: '#e8f5e9' },
+  evaluation: { emoji: '🩺', color: '#6a1b9a', bg: '#f3e5f5' },
+  follow_up:  { emoji: '📋', color: '#e65100', bg: '#fff3e0' },
+  other:      { emoji: '📌', color: '#424242', bg: '#f5f5f5' },
+};
+
+const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
+  scheduled:  { bg: '#e3f2fd', color: '#1565c0' },
+  confirmed:  { bg: '#e8f5e9', color: '#2e7d32' },
+  completed:  { bg: '#f3e5f5', color: '#6a1b9a' },
+  cancelled:  { bg: '#ffebee', color: '#c62828' },
+  no_show:    { bg: '#f5f5f5', color: '#616161' },
+};
+
+const TABS = ['Patient Info', 'Allergen Mix', 'Vials', 'Dosing Schedule', 'Audit Log', 'Appointments'];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function PatientDetailPage() {
+  const params       = useParams();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const patientDbId  = params.id as string;
+
+  const tabParam = searchParams.get('tab');
+
+  const [patient, setPatient]     = useState<PatientDetail | null>(null);
+  const [allergens, setAllergens] = useState<AllergenMixItem[]>([]);
+  const [vials, setVials]         = useState<Vial[]>([]);
+  const [dosing, setDosing]       = useState<DosingRow[]>([]);
+  const [audit, setAudit]         = useState<AuditEntry[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [activeTab, setActiveTab] = useState(tabParam ? parseInt(tabParam) : 0);
+  const [alerts, setAlerts]       = useState<{ level: 'warning' | 'danger'; message: string; detail?: string }[]>([]);
+
+  // Allergen add form
+  const [showAddAllergen, setShowAddAllergen] = useState(false);
+  const [newAllergen, setNewAllergen]         = useState({ name: '', type: '', concentration: '', volume: '' });
+
+  // Schedule generate state
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [scheduleMsg, setScheduleMsg]               = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tabParam !== null) setActiveTab(parseInt(tabParam));
+  }, [tabParam]);
+
+  // ── Load patient data ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/patients/${patientDbId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPatient(data.patient);
+          setAllergens(data.allergens ?? []);
+          setVials((data.vials ?? []).map((v: { id: string; vialNumber: number; color?: string; dilutionRatio: string; volume: number; expiry: string; status: string }) => ({
+            ...v,
+            color: isVialColor(v.color ?? '') ? (v.color as VialColor) : 'silver',
+            status: (['Active','Expired','Depleted','Pending'].includes(v.status) ? v.status : 'Active') as Vial['status'],
+          })));
+          setDosing(data.dosing ?? []);
+          setAudit(data.audit ?? []);
+        }
+
+        // Load appointments separately
+        const aRes = await fetch(`/api/appointments?patientId=${patientDbId}`);
+        if (aRes.ok) {
+          const aData = await aRes.json();
+          setAppointments(aData.appointments ?? []);
+        }
+
+        // Build safety alerts
+        const newAlerts: typeof alerts = [];
+        const expiredVials = vials.filter((v) => v.status === 'Expired');
+        if (expiredVials.length > 0) {
+          newAlerts.push({ level: 'danger', message: `${expiredVials.length} vial(s) have expired`, detail: 'Do not administer. Generate new vials immediately.' });
+        }
+        setAlerts(newAlerts);
+      } catch {
+        setPatient(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [patientDbId]);
+
+  // ── Add allergen ────────────────────────────────────────────────────────────
+  const handleAddAllergen = async () => {
+    if (!newAllergen.name) return;
+    // Optimistic UI
+    const optimistic: AllergenMixItem = {
+      id: `temp-${Date.now()}`,
+      name: newAllergen.name,
+      type: newAllergen.type || 'Unknown',
+      concentration: newAllergen.concentration || '—',
+      volume: parseFloat(newAllergen.volume) || 0,
+    };
+    setAllergens((prev) => [...prev, optimistic]);
+    setNewAllergen({ name: '', type: '', concentration: '', volume: '' });
+    setShowAddAllergen(false);
+  };
+
+  // ── Generate dosing schedule ────────────────────────────────────────────────
+  const handleGenerateSchedule = async () => {
+    setGeneratingSchedule(true);
+    setScheduleMsg(null);
+    try {
+      const res = await fetch(`/api/patients/${patientDbId}/schedule`, { method: 'POST' });
+      const data = await res.json() as { schedule?: unknown[]; error?: string };
+      if (res.ok) {
+        setScheduleMsg(`✓ Generated ${(data.schedule ?? []).length} dosing entries.`);
+        // Reload patient data
+        const pRes = await fetch(`/api/patients/${patientDbId}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          setDosing(pData.dosing ?? []);
+        }
+      } else {
+        setScheduleMsg(`⚠ ${data.error ?? 'Failed to generate schedule.'}`);
+      }
+    } catch {
+      setScheduleMsg('⚠ Network error.');
+    } finally {
+      setGeneratingSchedule(false);
+    }
+  };
+
+  // ── Dosing row update ───────────────────────────────────────────────────────
+  const handleDosingUpdate = (id: string, field: 'reaction' | 'notes', value: string) => {
+    setDosing((rows) => rows.map((r) => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  // ── Loading / not found ─────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <>
+        <TopBar title="Patient Detail" />
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading patient data…</div>
+      </>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <>
+        <TopBar title="Patient Not Found" />
+        <div style={{ padding: 24, color: '#c62828' }}>Patient not found. <Link href="/patients" style={{ color: '#0055a5' }}>← Back to Patients</Link></div>
+      </>
+    );
+  }
+
+  const fullName = `${patient.lastName}, ${patient.firstName}`;
+  const statusClass: Record<string, string> = {
+    'Build-Up': 'badge badge-buildup',
+    'Maintenance': 'badge badge-maintenance',
+    'Complete': 'badge badge-complete',
+    'Inactive': 'badge badge-inactive',
+  };
+
+  return (
+    <>
+      <TopBar
+        title={fullName}
+        breadcrumbs={[
+          { label: 'Integrated Allergy IMS' },
+          { label: 'Patients', href: '/patients' },
+          { label: fullName },
+        ]}
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className={statusClass[patient.status] || 'badge badge-inactive'}>{patient.status}</span>
+            <button className="btn btn-secondary btn-sm" onClick={() => router.push('/patients')}>← Back</button>
+          </div>
+        }
+      />
+      <div className="page-content">
+        {/* Safety alerts */}
+        {alerts.map((alert, i) => (
+          <SafetyAlert key={i} level={alert.level} message={alert.message} detail={alert.detail} onDismiss={() => setAlerts((a) => a.filter((_, j) => j !== i))} />
+        ))}
+
+        {/* Patient header card */}
+        <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 24, alignItems: 'center', padding: '12px 16px' }}>
+          <div style={{ width: 48, height: 48, background: '#0055a5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
+            {patient.firstName[0]}{patient.lastName[0]}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{fullName}</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              {patient.patientId} · DOB: {patient.dob} · {patient.physician}
+            </div>
+          </div>
+          <div style={{ fontSize: 12, color: '#6b7280', textAlign: 'right' }}>
+            <div>{patient.diagnosis}</div>
+            <div>Started: {patient.startDate}</div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="tab-bar">
+          {TABS.map((tab, i) => (
+            <button key={tab} className={`tab-item${activeTab === i ? ' active' : ''}`} onClick={() => setActiveTab(i)}>
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Tab 0: Patient Info ── */}
+        {activeTab === 0 && (
+          <div className="card">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <div>
+                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 12 }}>Personal Information</h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <tbody>
+                    {([
+                      ['First Name', patient.firstName],
+                      ['Last Name', patient.lastName],
+                      ['Date of Birth', patient.dob],
+                      ['Patient ID', patient.patientId],
+                      ['Phone', patient.phone || '—'],
+                      ['Email', patient.email || '—'],
+                      ['Insurance ID', patient.insuranceId || '—'],
+                    ] as [string, string][]).map(([label, value]) => (
+                      <tr key={label} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                        <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: 600, fontSize: 12, width: 140 }}>{label}</td>
+                        <td style={{ padding: '6px 0' }}>{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 12 }}>Clinical Details</h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <tbody>
+                    {([
+                      ['Physician', patient.physician],
+                      ['Clinic Location', patient.clinicLocation || '—'],
+                      ['Diagnosis', patient.diagnosis],
+                      ['Treatment Start', patient.startDate || '—'],
+                      ['Current Status', patient.status],
+                    ] as [string, string][]).map(([label, value]) => (
+                      <tr key={label} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                        <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: 600, fontSize: 12, width: 140 }}>{label}</td>
+                        <td style={{ padding: '6px 0' }}>
+                          {label === 'Current Status'
+                            ? <span className={statusClass[value] || 'badge badge-inactive'}>{value}</span>
+                            : value}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {patient.notes && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Notes</div>
+                    <div style={{ fontSize: 13, color: '#374151', background: '#f9fafb', padding: '8px 10px', border: '1px solid #e5e7eb' }}>{patient.notes}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 1: Allergen Mix ── */}
+        {activeTab === 1 && (
+          <div>
+            <div className="card" style={{ padding: 0, marginBottom: 12 }}>
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700 }}>Allergen Mix ({allergens.length} components)</h3>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowAddAllergen(!showAddAllergen)}>+ Add Allergen</button>
+              </div>
+              {allergens.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens in this mix yet.</div>
+              ) : (
+                <table className="clinical-table">
+                  <thead>
+                    <tr>
+                      <th>Allergen</th><th>Type</th><th>Concentration</th><th>Volume (mL)</th><th>Warnings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allergens.map((a) => (
+                      <tr key={a.id}>
+                        <td style={{ fontWeight: 500 }}>{a.name}</td>
+                        <td style={{ color: '#6b7280' }}>{a.type}</td>
+                        <td style={{ fontFamily: 'monospace' }}>{a.concentration}</td>
+                        <td style={{ fontFamily: 'monospace' }}>{typeof a.volume === 'number' ? a.volume.toFixed(2) : a.volume}</td>
+                        <td>{a.warning ? <span style={{ fontSize: 11, color: '#f57c00' }}>⚠ {a.warning}</span> : <span style={{ color: '#9ca3af', fontSize: 12 }}>—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {showAddAllergen && (
+                <div style={{ padding: '12px 16px', background: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div><label className="form-label">Allergen Name</label><input type="text" className="form-input" style={{ width: 180 }} value={newAllergen.name} onChange={(e) => setNewAllergen((n) => ({ ...n, name: e.target.value }))} /></div>
+                    <div><label className="form-label">Type</label><input type="text" className="form-input" style={{ width: 130 }} value={newAllergen.type} onChange={(e) => setNewAllergen((n) => ({ ...n, type: e.target.value }))} /></div>
+                    <div><label className="form-label">Conc.</label><input type="text" className="form-input" style={{ width: 80 }} placeholder="1:20" value={newAllergen.concentration} onChange={(e) => setNewAllergen((n) => ({ ...n, concentration: e.target.value }))} /></div>
+                    <div><label className="form-label">Volume (mL)</label><input type="number" className="form-input" style={{ width: 90 }} step="0.1" value={newAllergen.volume} onChange={(e) => setNewAllergen((n) => ({ ...n, volume: e.target.value }))} /></div>
+                    <button className="btn btn-primary btn-sm" onClick={handleAddAllergen}>Add</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setShowAddAllergen(false)}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 2: Vials ── */}
+        {activeTab === 2 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+              <Link href={`/vial-prep/new?patientId=${patient.id}`} className="btn btn-primary btn-sm">
+                🧪 New Vial Batch
+              </Link>
+            </div>
+            {vials.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: '32px 20px', color: '#9ca3af' }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>🧪</div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No vials prepared</div>
+                <div style={{ fontSize: 13, marginBottom: 14 }}>Create a vial batch to begin treatment.</div>
+                <Link href={`/vial-prep/new?patientId=${patient.id}`} className="btn btn-primary btn-sm">New Vial Batch</Link>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                {vials.map((vial) => (
+                  <VialCard key={vial.id} vialNumber={vial.vialNumber} color={vial.color} dilutionRatio={vial.dilutionRatio} volume={vial.volume} expiry={vial.expiry} status={vial.status} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab 3: Dosing Schedule ── */}
+        {activeTab === 3 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+              {scheduleMsg && <span style={{ fontSize: 12, color: scheduleMsg.startsWith('✓') ? '#2e7d32' : '#f57c00' }}>{scheduleMsg}</span>}
+              <button className="btn btn-primary btn-sm" onClick={handleGenerateSchedule} disabled={generatingSchedule}>
+                {generatingSchedule ? 'Generating…' : '⚡ Generate Build-Up Schedule'}
+              </button>
+            </div>
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700 }}>Dosing Schedule — click Reaction/Notes cells to edit</h3>
+              </div>
+              {dosing.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No dosing schedule yet. Generate vials first, then click "Generate Build-Up Schedule".</div>
+              ) : (
+                <DosingTable rows={dosing} editable onUpdate={handleDosingUpdate} />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 4: Audit Log ── */}
+        {activeTab === 4 && (
+          <div className="card" style={{ padding: 0 }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700 }}>Audit Log</h3>
+            </div>
+            {audit.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No audit entries yet.</div>
+            ) : (
+              <table className="clinical-table">
+                <thead>
+                  <tr><th>Timestamp</th><th>Action</th><th>User</th><th>Details</th></tr>
+                </thead>
+                <tbody>
+                  {audit.map((entry) => (
+                    <tr key={entry.id}>
+                      <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>{entry.timestamp}</td>
+                      <td style={{ fontWeight: 500 }}>{entry.action}</td>
+                      <td style={{ color: '#4b5563' }}>{entry.user}</td>
+                      <td style={{ color: '#6b7280', fontSize: 12 }}>
+                        {(() => { try { const p = JSON.parse(entry.details); return typeof p === 'object' ? Object.entries(p).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(' · ') : entry.details; } catch { return entry.details; } })()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab 5: Appointments ── */}
+        {activeTab === 5 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <Link href={`/calendar?new=1&patientId=${patient.id}`} className="btn btn-primary btn-sm">
+                📅 Schedule Appointment
+              </Link>
+            </div>
+            {appointments.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: '32px 20px', color: '#9ca3af' }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No appointments scheduled</div>
+                <div style={{ fontSize: 13, marginBottom: 14 }}>Schedule a shot, skin test, or evaluation for this patient.</div>
+                <Link href={`/calendar?new=1&patientId=${patient.id}`} className="btn btn-primary btn-sm">Schedule Now</Link>
+              </div>
+            ) : (
+              <div className="card" style={{ padding: 0 }}>
+                <table className="clinical-table">
+                  <thead>
+                    <tr><th>Type</th><th>Title</th><th>Date & Time</th><th>Provider</th><th>Status</th><th>Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {appointments
+                      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                      .map((appt) => {
+                        const tc = APPT_TYPE_CONFIG[appt.type] ?? APPT_TYPE_CONFIG.other;
+                        const sb = STATUS_BADGE[appt.status] ?? STATUS_BADGE.scheduled;
+                        const start = new Date(appt.startTime);
+                        return (
+                          <tr key={appt.id}>
+                            <td>
+                              <span style={{ background: tc.bg, color: tc.color, padding: '2px 7px', fontSize: 11, fontWeight: 600 }}>{tc.emoji} {appt.type.replace('_', ' ')}</span>
+                            </td>
+                            <td style={{ fontWeight: 500 }}>{appt.title}</td>
+                            <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                              {start.toLocaleDateString()} {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td style={{ color: '#4b5563', fontSize: 12 }}>{appt.provider ?? '—'}</td>
+                            <td>
+                              <span style={{ background: sb.bg, color: sb.color, padding: '2px 7px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                {appt.status.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td style={{ color: '#6b7280', fontSize: 12 }}>{appt.notes ?? '—'}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

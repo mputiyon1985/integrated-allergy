@@ -1,10 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/db';
 
 export async function GET() {
-  return NextResponse.json({ allergens: [] });
+  try {
+    const allergens = await prisma.allergen.findMany({
+      orderBy: { name: 'asc' },
+    });
+    const shaped = allergens.map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      manufacturer: a.manufacturer ?? '',
+      lotNumber: a.lotNumber ?? '',
+      stockConcentration: a.stockConc ?? '',
+      expiryDate: a.expiresAt ? a.expiresAt.toISOString().slice(0, 10) : '',
+      inStock: a.expiresAt ? a.expiresAt > new Date() : true,
+    }));
+    return NextResponse.json({ allergens: shaped });
+  } catch {
+    return NextResponse.json({ allergens: [] });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  return NextResponse.json({ id: `ALG-${Date.now()}`, ...body }, { status: 201 });
+  try {
+    const body = await req.json() as {
+      name: string;
+      type?: string;
+      manufacturer?: string;
+      lotNumber?: string;
+      stockConcentration?: string;
+      stockConc?: string;
+      expiryDate?: string;
+    };
+
+    if (!body.name) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 });
+    }
+
+    const allergen = await prisma.allergen.create({
+      data: {
+        name: body.name,
+        type: body.type ?? 'Other',
+        manufacturer: body.manufacturer ?? null,
+        lotNumber: body.lotNumber ?? null,
+        stockConc: body.stockConcentration ?? body.stockConc ?? null,
+        expiresAt: body.expiryDate ? new Date(body.expiryDate) : null,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        id: allergen.id,
+        name: allergen.name,
+        type: allergen.type,
+        manufacturer: allergen.manufacturer ?? '',
+        lotNumber: allergen.lotNumber ?? '',
+        stockConcentration: allergen.stockConc ?? '',
+        expiryDate: allergen.expiresAt ? allergen.expiresAt.toISOString().slice(0, 10) : '',
+        inStock: true,
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error('POST /api/allergens error:', err);
+    return NextResponse.json({ error: 'Failed to create allergen' }, { status: 500 });
+  }
 }

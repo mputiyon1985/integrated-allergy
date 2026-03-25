@@ -29,6 +29,18 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Calendar',
+    href: '/calendar',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8"  y1="2" x2="8"  y2="6" />
+        <line x1="3"  y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
     label: 'Allergens',
     href: '/allergens',
     icon: (
@@ -84,32 +96,15 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Clinic branding */}
-      <div
-        style={{
-          padding: '18px 16px 16px',
-          borderBottom: '1px solid #2d3f5e',
-        }}
-      >
+      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid #2d3f5e' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              background: '#0055a5',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
+          <div style={{ width: 32, height: 32, background: '#0055a5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </svg>
           </div>
           <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.2 }}>
-              Integrated Allergy
-            </div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.2 }}>Integrated Allergy</div>
             <div style={{ color: '#8a9bbf', fontSize: 11, marginTop: 2 }}>IMS v1.0</div>
           </div>
         </div>
@@ -139,16 +134,8 @@ export default function Sidebar() {
                 borderLeft: active ? '3px solid #4db8ff' : '3px solid transparent',
                 transition: 'background 0.15s, color 0.15s',
               }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = '#243050';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                }
-              }}
+              onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = '#243050'; }}
+              onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
             >
               <span style={{ opacity: active ? 1 : 0.7 }}>{item.icon}</span>
               {item.label}
@@ -158,14 +145,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div
-        style={{
-          padding: '12px 16px',
-          borderTop: '1px solid #2d3f5e',
-          color: '#5a6a8a',
-          fontSize: 11,
-        }}
-      >
+      <div style={{ padding: '12px 16px', borderTop: '1px solid #2d3f5e', color: '#5a6a8a', fontSize: 11 }}>
         <div>© 2026 Integrated Allergy</div>
         <div style={{ marginTop: 2 }}>Clinical IMS Platform</div>
       </div>

@@ -1,0 +1,627 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import TopBar from '@/components/layout/TopBar';
+import SafetyAlert from '@/components/clinical/SafetyAlert';
+import VialCard from '@/components/clinical/VialCard';
+import { VIAL_CONFIGS } from '@/lib/clinical/dilution';
+import { validateAllergenMix, validateGlycerin, type SafetyWarning } from '@/lib/clinical/safety';
+import { vialColorMap, type VialColor } from '@/lib/ui/theme';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Patient {
+  id: string;
+  name: string;
+  patientId: string;
+}
+
+interface AllergenOption {
+  id: string;
+  name: string;
+  type: string;
+  stockConcentration: string;
+}
+
+interface MixEntry {
+  allergenId: string;
+  name: string;
+  type: string;
+  volumeMl: number;
+  stockConc: string;
+}
+
+interface VialPreview {
+  vialNumber: number;
+  colorCode: VialColor;
+  dilutionRatio: string;
+  totalVolumeMl: number;
+  glycerinPercent: number;
+  expiresAt: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmt(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+const TARGET_VOLUMES = [5, 10, 15, 20];
+
+function isVialColor(s: string): s is VialColor {
+  return Object.keys(vialColorMap).includes(s);
+}
+
+// ─── Step indicators ──────────────────────────────────────────────────────────
+
+const STEPS = [
+  { n: 1, label: 'Patient & Batch Info' },
+  { n: 2, label: 'Allergen Mix' },
+  { n: 3, label: 'Vial Preview' },
+  { n: 4, label: 'Review & Submit' },
+];
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function NewVialBatchPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const prePatientId = searchParams.get('patientId') ?? '';
+
+  const [step, setStep]         = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Patients
+  const [patients, setPatients]     = useState<Patient[]>([]);
+  const [patientSearch, setPatientSearch] = useState('');
+
+  // Step 1
+  const [patientId, setPatientId]   = useState(prePatientId);
+  const [batchName, setBatchName]   = useState('');
+  const [prescriptionDate, setPrescriptionDate] = useState(fmt(new Date()));
+  const [preparedBy, setPreparedBy] = useState('');
+  const [verifiedBy, setVerifiedBy] = useState('');
+  const [notes, setNotes]           = useState('');
+
+  // Step 2
+  const [allergenOptions, setAllergenOptions] = useState<AllergenOption[]>([]);
+  const [mixEntries, setMixEntries]           = useState<MixEntry[]>([]);
+  const [targetVolume, setTargetVolume]       = useState(10);
+  const [glycerinPct, setGlycerinPct]         = useState(10);
+  const [showAllergenPicker, setShowAllergenPicker] = useState(false);
+  const [allergenSearch, setAllergenSearch]         = useState('');
+  const [safetyWarnings, setSafetyWarnings]         = useState<SafetyWarning[]>([]);
+
+  // Step 3
+  const [vialPreviews, setVialPreviews] = useState<VialPreview[]>([]);
+
+  // ── Load patients ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/patients')
+      .then((r) => r.json())
+      .then((d) => {
+        const pts: Patient[] = d.patients ?? [];
+        setPatients(pts);
+        if (prePatientId) {
+          const found = pts.find((p) => p.id === prePatientId);
+          if (found) setPatientSearch(found.name);
+        }
+      })
+      .catch(() => {});
+  }, [prePatientId]);
+
+  // ── Load allergens ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/allergens')
+      .then((r) => r.json())
+      .then((d) => setAllergenOptions(d.allergens ?? []))
+      .catch(() => {});
+  }, []);
+
+  // ── Auto-batch name ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!batchName && patientId) setBatchName(`Batch #1`);
+  }, [patientId, batchName]);
+
+  // ── Recompute safety warnings when mix/glycerin changes ────────────────────
+  useEffect(() => {
+    const types = mixEntries.map((e) => e.type.toLowerCase());
+    const mixWarns = validateAllergenMix(types);
+    const glycWarn = validateGlycerin(glycerinPct);
+    setSafetyWarnings([...mixWarns, ...(glycWarn ? [glycWarn] : [])]);
+  }, [mixEntries, glycerinPct]);
+
+  // ── Generate vial previews ──────────────────────────────────────────────────
+  const buildVialPreviews = useCallback((): VialPreview[] => {
+    return VIAL_CONFIGS.map((cfg) => ({
+      vialNumber:     cfg.vialNumber,
+      colorCode:      isVialColor(cfg.colorCode) ? cfg.colorCode : 'silver',
+      dilutionRatio:  cfg.label,
+      totalVolumeMl:  targetVolume,
+      glycerinPercent: glycerinPct,
+      expiresAt:      fmt(addDays(new Date(), 90)),
+    }));
+  }, [targetVolume, glycerinPct]);
+
+  // ── Navigation ──────────────────────────────────────────────────────────────
+
+  function goNext() {
+    if (step === 1 && !validateStep1()) return;
+    if (step === 2 && !validateStep2()) return;
+    if (step === 2) setVialPreviews(buildVialPreviews());
+    setStep((s) => Math.min(s + 1, 4));
+  }
+
+  function goBack() { setStep((s) => Math.max(s - 1, 1)); }
+
+  function validateStep1(): boolean {
+    if (!patientId) { alert('Please select a patient.'); return false; }
+    if (!preparedBy.trim()) { alert('Prepared By is required.'); return false; }
+    return true;
+  }
+
+  function validateStep2(): boolean {
+    if (mixEntries.length === 0) { alert('Add at least one allergen.'); return false; }
+    const hasHardError = safetyWarnings.some((w) => w.level === 'error');
+    if (hasHardError) { alert('Fix safety errors before proceeding.'); return false; }
+    return true;
+  }
+
+  // ── Allergen mix helpers ────────────────────────────────────────────────────
+
+  function addAllergen(a: AllergenOption) {
+    if (mixEntries.find((e) => e.allergenId === a.id)) return;
+    setMixEntries((prev) => [...prev, { allergenId: a.id, name: a.name, type: a.type, volumeMl: 1.0, stockConc: a.stockConcentration }]);
+    setShowAllergenPicker(false);
+    setAllergenSearch('');
+  }
+
+  function removeAllergen(allergenId: string) {
+    setMixEntries((prev) => prev.filter((e) => e.allergenId !== allergenId));
+  }
+
+  function updateVolume(allergenId: string, vol: number) {
+    setMixEntries((prev) => prev.map((e) => e.allergenId === allergenId ? { ...e, volumeMl: vol } : e));
+  }
+
+  const totalMixVol = mixEntries.reduce((s, e) => s + (e.volumeMl || 0), 0);
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
+  async function handleSubmit() {
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const payload = {
+        patientId,
+        batchName,
+        prescriptionDate,
+        preparedBy,
+        verifiedBy,
+        notes,
+        glycerinPercent: glycerinPct,
+        targetVolumeMl:  targetVolume,
+        allergens: mixEntries.map((e) => ({
+          allergenId: e.allergenId,
+          name:       e.name,
+          type:       e.type,
+          volumeMl:   e.volumeMl,
+          stockConc:  e.stockConc,
+        })),
+        vials: vialPreviews.map((v) => ({
+          vialNumber:     v.vialNumber,
+          colorCode:      v.colorCode,
+          dilutionRatio:  v.dilutionRatio,
+          totalVolumeMl:  v.totalVolumeMl,
+          glycerinPercent: v.glycerinPercent,
+          expiresAt:      v.expiresAt,
+        })),
+      };
+
+      const res = await fetch('/api/vial-batches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok) { setSubmitError(data.error ?? 'Failed to create batch.'); return; }
+
+      // Redirect to patient detail → Tab 3 (Vials)
+      router.push(`/patients/${patientId}?tab=2`);
+    } catch {
+      setSubmitError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ── Derived display ─────────────────────────────────────────────────────────
+  const selectedPatient = patients.find((p) => p.id === patientId);
+  const filteredAllergens = allergenOptions.filter((a) =>
+    !allergenSearch || a.name.toLowerCase().includes(allergenSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenSearch.toLowerCase())
+  );
+
+  return (
+    <>
+      <TopBar
+        title="New Vial Batch"
+        breadcrumbs={[
+          { label: 'Integrated Allergy IMS' },
+          { label: 'Vial Prep', href: '/vial-prep' },
+          { label: 'New Batch' },
+        ]}
+        actions={
+          <button className="btn btn-secondary" onClick={() => router.push('/vial-prep')}>Cancel</button>
+        }
+      />
+
+      <div className="page-content">
+        {/* Step indicator */}
+        <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #d1d5db', overflow: 'hidden' }}>
+          {STEPS.map((s) => {
+            const done    = step > s.n;
+            const active  = step === s.n;
+            return (
+              <div
+                key={s.n}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  borderRight: s.n < 4 ? '1px solid #d1d5db' : 'none',
+                  background: active ? '#0055a5' : done ? '#e8f5e9' : '#f9fafb',
+                  cursor: done ? 'pointer' : 'default',
+                }}
+                onClick={() => done && setStep(s.n)}
+              >
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0,
+                  background: active ? '#fff' : done ? '#2e7d32' : '#d1d5db',
+                  color: active ? '#0055a5' : done ? '#fff' : '#6b7280',
+                }}>
+                  {done ? '✓' : s.n}
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: active ? '#fff' : done ? '#2e7d32' : '#9ca3af' }}>
+                    Step {s.n}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? '#fff' : done ? '#374151' : '#6b7280' }}>
+                    {s.label}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── STEP 1: Patient + Batch Info ── */}
+        {step === 1 && (
+          <div className="card">
+            <h3 style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 18, paddingBottom: 10, borderBottom: '1px solid #e5e7eb' }}>
+              Patient &amp; Batch Information
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Patient selector */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Patient <span style={{ color: '#c62828' }}>*</span></label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Search patient by name or ID…"
+                  value={patientSearch}
+                  onChange={(e) => { setPatientSearch(e.target.value); if (!e.target.value) setPatientId(''); }}
+                  style={{ maxWidth: 400 }}
+                />
+                {patientSearch && !patientId && (
+                  <div style={{ border: '1px solid #d1d5db', maxHeight: 160, overflowY: 'auto', background: '#fff', maxWidth: 400 }}>
+                    {patients.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()) || p.patientId.toLowerCase().includes(patientSearch.toLowerCase())).slice(0, 8).map((p) => (
+                      <div key={p.id} onClick={() => { setPatientId(p.id); setPatientSearch(p.name); }} style={{ padding: '7px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f0f2f5' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f7ff')} onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}>
+                        <strong>{p.name}</strong> <span style={{ color: '#6b7280', fontSize: 11 }}>{p.patientId}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedPatient && (
+                  <div style={{ marginTop: 4, fontSize: 11, color: '#2e7d32' }}>✓ {selectedPatient.name} ({selectedPatient.patientId})</div>
+                )}
+              </div>
+
+              <div>
+                <label className="form-label">Batch Name / Number</label>
+                <input type="text" className="form-input" placeholder="e.g. Batch #3" value={batchName} onChange={(e) => setBatchName(e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">Prescription Date</label>
+                <input type="date" className="form-input" value={prescriptionDate} onChange={(e) => setPrescriptionDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">Prepared By <span style={{ color: '#c62828' }}>*</span></label>
+                <input type="text" className="form-input" placeholder="Nurse / pharmacist name" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">Verified By</label>
+                <input type="text" className="form-input" placeholder="Second-check staff name" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Notes</label>
+                <textarea className="form-input" rows={3} style={{ resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special instructions, clinical notes…" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2: Allergen Mix ── */}
+        {step === 2 && (
+          <div>
+            {/* Safety panel */}
+            {safetyWarnings.map((w, i) => (
+              <SafetyAlert key={i} level={w.level === 'error' ? 'danger' : 'warning'} message={w.message} />
+            ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+              {/* Target volume + Glycerin */}
+              <div className="card">
+                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 12 }}>Batch Parameters</h4>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <div>
+                    <label className="form-label">Target Total Volume</label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {TARGET_VOLUMES.map((v) => (
+                        <button key={v} type="button" onClick={() => setTargetVolume(v)} style={{ padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: targetVolume === v ? '#0055a5' : '#f9fafb', color: targetVolume === v ? '#fff' : '#374151', border: '1px solid #d1d5db' }}>
+                          {v} mL
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">Glycerin % <span style={{ color: glycerinPct > 50 ? '#c62828' : glycerinPct > 40 ? '#f57c00' : '#9ca3af' }}>{glycerinPct > 50 ? '⛔ EXCEEDS LIMIT' : glycerinPct > 40 ? '⚠ Near limit' : ''}</span></label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input type="range" min={0} max={60} value={glycerinPct} onChange={(e) => setGlycerinPct(Number(e.target.value))} style={{ width: 120 }} />
+                      <input type="number" className="form-input" style={{ width: 70 }} min={0} max={60} value={glycerinPct} onChange={(e) => setGlycerinPct(Number(e.target.value))} />
+                      <span style={{ fontSize: 13, color: '#6b7280' }}>%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Volume meter */}
+              <div className="card">
+                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 12 }}>Volume Status</h4>
+                <div style={{ fontSize: 28, fontWeight: 700, color: totalMixVol > targetVolume ? '#c62828' : totalMixVol === targetVolume ? '#2e7d32' : '#0055a5' }}>
+                  {totalMixVol.toFixed(1)} / {targetVolume} mL
+                </div>
+                <div style={{ height: 8, background: '#f0f2f5', marginTop: 10, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, (totalMixVol / targetVolume) * 100)}%`, background: totalMixVol > targetVolume ? '#c62828' : totalMixVol === targetVolume ? '#2e7d32' : '#0055a5', transition: 'width 0.2s' }} />
+                </div>
+                {totalMixVol > targetVolume && <div style={{ fontSize: 11, color: '#c62828', marginTop: 6 }}>⛔ Exceeds target by {(totalMixVol - targetVolume).toFixed(1)} mL</div>}
+                {totalMixVol < targetVolume && totalMixVol > 0 && <div style={{ fontSize: 11, color: '#f57c00', marginTop: 6 }}>⚠ {(targetVolume - totalMixVol).toFixed(1)} mL remaining</div>}
+                {totalMixVol === targetVolume && totalMixVol > 0 && <div style={{ fontSize: 11, color: '#2e7d32', marginTop: 6 }}>✓ Target reached</div>}
+              </div>
+            </div>
+
+            {/* Allergen table */}
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700 }}>Allergen Mix ({mixEntries.length} component{mixEntries.length !== 1 ? 's' : ''})</h3>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowAllergenPicker(true)}>+ Add Allergen</button>
+              </div>
+              {mixEntries.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens added yet. Click "+ Add Allergen" to begin.</div>
+              ) : (
+                <table className="clinical-table">
+                  <thead>
+                    <tr>
+                      <th>Allergen</th>
+                      <th>Type</th>
+                      <th>Stock Conc.</th>
+                      <th>Volume (mL)</th>
+                      <th>Remove</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mixEntries.map((e) => (
+                      <tr key={e.allergenId}>
+                        <td style={{ fontWeight: 500 }}>{e.name}</td>
+                        <td style={{ color: '#6b7280' }}>{e.type}</td>
+                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.stockConc || '—'}</td>
+                        <td>
+                          <input
+                            type="number"
+                            className="form-input"
+                            style={{ width: 80 }}
+                            min={0.1}
+                            max={targetVolume}
+                            step={0.1}
+                            value={e.volumeMl}
+                            onChange={(ev) => updateVolume(e.allergenId, parseFloat(ev.target.value) || 0)}
+                          />
+                        </td>
+                        <td>
+                          <button className="btn btn-danger btn-sm" onClick={() => removeAllergen(e.allergenId)}>✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Allergen picker modal */}
+            {showAllergenPicker && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setShowAllergenPicker(false)}>
+                <div style={{ background: '#fff', width: '100%', maxWidth: 480, maxHeight: '70vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0055a5' }}>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Select Allergen</span>
+                    <button onClick={() => setShowAllergenPicker(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>×</button>
+                  </div>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb' }}>
+                    <input type="text" className="form-input" placeholder="Search allergens…" value={allergenSearch} onChange={(e) => setAllergenSearch(e.target.value)} autoFocus />
+                  </div>
+                  <div style={{ overflowY: 'auto', flex: 1 }}>
+                    {filteredAllergens.length === 0 ? (
+                      <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens found in library. Add allergens in the Allergens section first.</div>
+                    ) : (
+                      filteredAllergens.map((a) => {
+                        const already = mixEntries.some((e) => e.allergenId === a.id);
+                        return (
+                          <div key={a.id} onClick={() => !already && addAllergen(a)} style={{ padding: '9px 16px', borderBottom: '1px solid #f0f2f5', cursor: already ? 'not-allowed' : 'pointer', opacity: already ? 0.5 : 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} onMouseEnter={(e) => { if (!already) (e.currentTarget as HTMLDivElement).style.background = '#f0f7ff'; }} onMouseLeave={(e) => { if (!already) (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{a.name}</div>
+                              <div style={{ fontSize: 11, color: '#6b7280' }}>{a.type} · {a.stockConcentration || 'No conc.'}</div>
+                            </div>
+                            {already && <span style={{ fontSize: 11, color: '#9ca3af' }}>Added</span>}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 3: Vial Preview ── */}
+        {step === 3 && (
+          <div>
+            <SafetyAlert level="warning" message="Verify all vial details before proceeding. Labels will be generated from this data." />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
+              {vialPreviews.map((v) => (
+                <div key={v.vialNumber} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                  <div style={{ background: vialColorMap[v.colorCode]?.bg ?? '#f0f2f5', padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: vialColorMap[v.colorCode]?.text === '#fff' ? (vialColorMap[v.colorCode]?.bg ?? '#000') : '#1a1a2e' }}>
+                      Vial #{v.vialNumber}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', background: vialColorMap[v.colorCode]?.bg ?? '#eee', color: vialColorMap[v.colorCode]?.text === '#fff' ? '#fff' : vialColorMap[v.colorCode]?.bg, border: `1px solid ${vialColorMap[v.colorCode]?.bg ?? '#ccc'}` }}>
+                      {vialColorMap[v.colorCode]?.label ?? v.colorCode}
+                    </span>
+                  </div>
+                  <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {[
+                        ['Dilution', v.dilutionRatio],
+                        ['Volume', `${v.totalVolumeMl} mL`],
+                        ['Glycerin', `${v.glycerinPercent}%`],
+                      ].map(([k, val]) => (
+                        <div key={k}>
+                          <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{k}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginTop: 1 }}>{val}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Editable expiry */}
+                    <div>
+                      <label style={{ fontSize: 10, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 2 }}>Expiry Date</label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ fontSize: 12 }}
+                        value={v.expiresAt}
+                        onChange={(e) => setVialPreviews((prev) => prev.map((vp) => vp.vialNumber === v.vialNumber ? { ...vp, expiresAt: e.target.value } : vp))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 4: Review & Submit ── */}
+        {step === 4 && (
+          <div>
+            {submitError && (
+              <div style={{ background: '#ffebee', color: '#c62828', padding: '10px 14px', marginBottom: 16, fontSize: 13, border: '1px solid #ef9a9a' }}>{submitError}</div>
+            )}
+            {safetyWarnings.map((w, i) => (
+              <SafetyAlert key={i} level={w.level === 'error' ? 'danger' : 'warning'} message={w.message} />
+            ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              {/* Summary card */}
+              <div className="card">
+                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>Batch Summary</h4>
+                {[
+                  ['Patient', selectedPatient ? `${selectedPatient.name} (${selectedPatient.patientId})` : '—'],
+                  ['Batch',   batchName || '—'],
+                  ['Rx Date', prescriptionDate],
+                  ['Prepared By', preparedBy],
+                  ['Verified By', verifiedBy || '—'],
+                  ['Target Vol', `${targetVolume} mL`],
+                  ['Glycerin', `${glycerinPct}%`],
+                  ['Allergens', mixEntries.length.toString()],
+                  ['Vials', vialPreviews.length.toString()],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f2f5', fontSize: 13 }}>
+                    <span style={{ color: '#6b7280', fontWeight: 600, fontSize: 12 }}>{k}</span>
+                    <span style={{ fontWeight: 500 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Allergen list */}
+              <div className="card">
+                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>Allergen Mix</h4>
+                {mixEntries.map((e) => (
+                  <div key={e.allergenId} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f2f5', fontSize: 13 }}>
+                    <span style={{ fontWeight: 500 }}>{e.name}</span>
+                    <span style={{ color: '#6b7280' }}>{e.volumeMl.toFixed(1)} mL</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, fontWeight: 700, marginTop: 4, borderTop: '2px solid #e5e7eb' }}>
+                  <span>Total</span>
+                  <span style={{ color: totalMixVol === targetVolume ? '#2e7d32' : '#c62828' }}>{totalMixVol.toFixed(1)} / {targetVolume} mL</span>
+                </div>
+                {notes && (
+                  <div style={{ marginTop: 10, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', fontSize: 12, color: '#4b5563' }}>📝 {notes}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Vial previews */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              {vialPreviews.map((v) => (
+                <VialCard
+                  key={v.vialNumber}
+                  vialNumber={v.vialNumber}
+                  color={v.colorCode}
+                  dilutionRatio={v.dilutionRatio}
+                  volume={v.totalVolumeMl}
+                  expiry={v.expiresAt}
+                  status="Pending"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Navigation buttons */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
+          <button className="btn btn-secondary" onClick={goBack} disabled={step === 1}>
+            ← Back
+          </button>
+          {step < 4 ? (
+            <button className="btn btn-primary" onClick={goNext}>
+              Next: {STEPS[step]?.label} →
+            </button>
+          ) : (
+            <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting} style={{ minWidth: 160 }}>
+              {submitting ? 'Generating…' : '🧪 Generate Batch'}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
