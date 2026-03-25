@@ -172,19 +172,27 @@ export default function CalendarPage() {
         status:    form.status,
       };
 
+      let res: Response;
       if (editAppt) {
-        await fetch(`/api/appointments/${editAppt.id}`, {
+        res = await fetch(`/api/appointments/${editAppt.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        await fetch('/api/appointments', {
+        res = await fetch('/api/appointments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setFormError(data.error ?? `Server error (${res.status}). Please try again.`);
+        return;
+      }
+
       setShowModal(false);
       setEditAppt(null);
       loadAppointments();

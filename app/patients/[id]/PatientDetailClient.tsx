@@ -111,14 +111,31 @@ export default function PatientDetailPage() {
   // Allergen add form
   const [showAddAllergen, setShowAddAllergen] = useState(false);
   const [newAllergen, setNewAllergen]         = useState({ name: '', type: '', concentration: '', volume: '' });
+  const [addingAllergen, setAddingAllergen]   = useState(false);
+  const [allergenError, setAllergenError]     = useState<string | null>(null);
+  const [allergenOptions, setAllergenOptions] = useState<{ id: string; name: string; type: string; stockConcentration: string }[]>([]);
 
   // Schedule generate state
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [scheduleMsg, setScheduleMsg]               = useState<string | null>(null);
 
+  // Allergen picker state
+  const [showAllergenPicker, setShowAllergenPicker] = useState(false);
+  const [allergenPickerSearch, setAllergenPickerSearch] = useState('');
+  const [selectedAllergenId, setSelectedAllergenId] = useState('');
+  const [selectedAllergenVolume, setSelectedAllergenVolume] = useState('1.0');
+
   useEffect(() => {
     if (tabParam !== null) setActiveTab(parseInt(tabParam));
   }, [tabParam]);
+
+  // ── Load allergen library for picker ────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/allergens')
+      .then((r) => r.json())
+      .then((d) => setAllergenOptions(d.allergens ?? []))
+      .catch(() => {});
+  }, []);
 
   // ── Load patient data ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -164,18 +181,66 @@ export default function PatientDetailPage() {
 
   // ── Add allergen ────────────────────────────────────────────────────────────
   const handleAddAllergen = async () => {
+    setAllergenError(null);
+    if (!selectedAllergenId) { setAllergenError('Please select an allergen.'); return; }
+    const volumeNum = parseFloat(selectedAllergenVolume);
+    if (!volumeNum || volumeNum <= 0) { setAllergenError('Please enter a valid volume.'); return; }
+
+    setAddingAllergen(true);
+    try {
+      const res = await fetch(`/api/patients/${patientDbId}/allergens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allergenId: selectedAllergenId, volumeMl: volumeNum }),
+      });
+      if (res.ok) {
+        const added = await res.json() as AllergenMixItem;
+        setAllergens((prev) => [...prev, added]);
+        setSelectedAllergenId('');
+        setSelectedAllergenVolume('1.0');
+        setShowAllergenPicker(false);
+        setShowAddAllergen(false);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setAllergenError(data.error ?? 'Failed to add allergen.');
+      }
+    } catch {
+      setAllergenError('Network error. Please try again.');
+    } finally {
+      setAddingAllergen(false);
+    }
+  };
+
+  // ── Legacy manual allergen add (fallback) ───────────────────────────────────
+  const handleAddAllergenManual = async () => {
     if (!newAllergen.name) return;
-    // Optimistic UI
-    const optimistic: AllergenMixItem = {
-      id: `temp-${Date.now()}`,
-      name: newAllergen.name,
-      type: newAllergen.type || 'Unknown',
-      concentration: newAllergen.concentration || '—',
-      volume: parseFloat(newAllergen.volume) || 0,
-    };
-    setAllergens((prev) => [...prev, optimistic]);
-    setNewAllergen({ name: '', type: '', concentration: '', volume: '' });
-    setShowAddAllergen(false);
+    setAddingAllergen(true);
+    setAllergenError(null);
+    try {
+      const res = await fetch(`/api/patients/${patientDbId}/allergens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newAllergen.name,
+          type: newAllergen.type || 'Other',
+          concentration: newAllergen.concentration,
+          volumeMl: parseFloat(newAllergen.volume) || 1.0,
+        }),
+      });
+      if (res.ok) {
+        const added = await res.json() as AllergenMixItem;
+        setAllergens((prev) => [...prev, added]);
+        setNewAllergen({ name: '', type: '', concentration: '', volume: '' });
+        setShowAddAllergen(false);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setAllergenError(data.error ?? 'Failed to add allergen.');
+      }
+    } catch {
+      setAllergenError('Network error. Please try again.');
+    } finally {
+      setAddingAllergen(false);
+    }
   };
 
   // ── Generate dosing schedule ────────────────────────────────────────────────
@@ -204,8 +269,39 @@ export default function PatientDetailPage() {
   };
 
   // ── Dosing row update ───────────────────────────────────────────────────────
-  const handleDosingUpdate = (id: string, field: 'reaction' | 'notes', value: string) => {
+  const handleDosingUpdate = async (id: string, field: 'reaction' | 'notes', value: string) => {
+    // Optimistic update
     setDosing((rows) => rows.map((r) => r.id === id ? { ...r, [field]: value } : r));
+    // Persist to API
+    try {
+      await fetch(`/api/patients/${patientDbId}/schedule/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+    } catch {
+      // Non-critical: keep optimistic update
+    }
+  };
+
+  // ── Mark dose administered ──────────────────────────────────────────────────
+  const handleMarkAdministered = async (doseId: string, administered: boolean) => {
+    // Optimistic update
+    setDosing((rows) => rows.map((r) => r.id === doseId ? { ...r, status: administered ? 'Completed' : 'Scheduled' } : r));
+    try {
+      const res = await fetch(`/api/patients/${patientDbId}/schedule/${doseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ administered }),
+      });
+      if (!res.ok) {
+        // Revert on failure
+        setDosing((rows) => rows.map((r) => r.id === doseId ? { ...r, status: administered ? 'Scheduled' : 'Completed' } : r));
+      }
+    } catch {
+      // Revert on network error
+      setDosing((rows) => rows.map((r) => r.id === doseId ? { ...r, status: administered ? 'Scheduled' : 'Completed' } : r));
+    }
   };
 
   // ── Loading / not found ─────────────────────────────────────────────────────
@@ -347,8 +443,13 @@ export default function PatientDetailPage() {
             <div className="card" style={{ padding: 0, marginBottom: 12 }}>
               <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: 13, fontWeight: 700 }}>Allergen Mix ({allergens.length} components)</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowAddAllergen(!showAddAllergen)}>+ Add Allergen</button>
+                <button className="btn btn-primary btn-sm" onClick={() => { setShowAllergenPicker(true); setAllergenError(null); }}>+ Add Allergen</button>
               </div>
+              {allergenError && (
+                <div style={{ padding: '8px 16px', background: '#fef2f2', color: '#b91c1c', fontSize: 13, borderBottom: '1px solid #fecaca' }}>
+                  {allergenError}
+                </div>
+              )}
               {allergens.length === 0 ? (
                 <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens in this mix yet.</div>
               ) : (
@@ -371,18 +472,51 @@ export default function PatientDetailPage() {
                   </tbody>
                 </table>
               )}
-              {showAddAllergen && (
-                <div style={{ padding: '12px 16px', background: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    <div><label className="form-label">Allergen Name</label><input type="text" className="form-input" style={{ width: 180 }} value={newAllergen.name} onChange={(e) => setNewAllergen((n) => ({ ...n, name: e.target.value }))} /></div>
-                    <div><label className="form-label">Type</label><input type="text" className="form-input" style={{ width: 130 }} value={newAllergen.type} onChange={(e) => setNewAllergen((n) => ({ ...n, type: e.target.value }))} /></div>
-                    <div><label className="form-label">Conc.</label><input type="text" className="form-input" style={{ width: 80 }} placeholder="1:20" value={newAllergen.concentration} onChange={(e) => setNewAllergen((n) => ({ ...n, concentration: e.target.value }))} /></div>
-                    <div><label className="form-label">Volume (mL)</label><input type="number" className="form-input" style={{ width: 90 }} step="0.1" value={newAllergen.volume} onChange={(e) => setNewAllergen((n) => ({ ...n, volume: e.target.value }))} /></div>
-                    <button className="btn btn-primary btn-sm" onClick={handleAddAllergen}>Add</button>
-                    <button className="btn btn-secondary btn-sm" onClick={() => setShowAddAllergen(false)}>Cancel</button>
-                  </div>
-                </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Allergen Picker Modal ── */}
+        {showAllergenPicker && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowAllergenPicker(false); }}>
+            <div style={{ background: '#fff', width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0055a5' }}>
+                <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Add Allergen to Mix</span>
+                <button onClick={() => setShowAllergenPicker(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>×</button>
+              </div>
+              {allergenError && (
+                <div style={{ padding: '8px 16px', background: '#fef2f2', color: '#b91c1c', fontSize: 13, borderBottom: '1px solid #fecaca' }}>{allergenError}</div>
               )}
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb' }}>
+                <input type="text" className="form-input" placeholder="Search allergens…" value={allergenPickerSearch} onChange={(e) => setAllergenPickerSearch(e.target.value)} autoFocus />
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {allergenOptions.filter((a) => !allergenPickerSearch || a.name.toLowerCase().includes(allergenPickerSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenPickerSearch.toLowerCase())).length === 0 ? (
+                  <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens in library. Add allergens in the Allergens section first.</div>
+                ) : (
+                  allergenOptions.filter((a) => !allergenPickerSearch || a.name.toLowerCase().includes(allergenPickerSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenPickerSearch.toLowerCase())).map((a) => {
+                    const selected = selectedAllergenId === a.id;
+                    return (
+                      <div key={a.id} onClick={() => setSelectedAllergenId(selected ? '' : a.id)} style={{ padding: '9px 16px', borderBottom: '1px solid #f0f2f5', cursor: 'pointer', background: selected ? '#e3f2fd' : '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{a.name}</div>
+                          <div style={{ fontSize: 11, color: '#6b7280' }}>{a.type} · {a.stockConcentration || 'No conc.'}</div>
+                        </div>
+                        {selected && <span style={{ color: '#1565c0', fontWeight: 700, fontSize: 12 }}>✓ Selected</span>}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, alignItems: 'center' }}>
+                <label className="form-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Volume (mL):</label>
+                <input type="number" className="form-input" style={{ width: 90 }} min={0.1} step={0.1} value={selectedAllergenVolume} onChange={(e) => setSelectedAllergenVolume(e.target.value)} />
+                <button className="btn btn-secondary" onClick={() => setShowAllergenPicker(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleAddAllergen} disabled={addingAllergen || !selectedAllergenId}>
+                  {addingAllergen ? 'Adding…' : 'Add to Mix'}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -428,7 +562,7 @@ export default function PatientDetailPage() {
               {dosing.length === 0 ? (
                 <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No dosing schedule yet. Generate vials first, then click "Generate Build-Up Schedule".</div>
               ) : (
-                <DosingTable rows={dosing} editable onUpdate={handleDosingUpdate} />
+                <DosingTable rows={dosing} editable onUpdate={handleDosingUpdate} onMarkAdministered={handleMarkAdministered} />
               )}
             </div>
           </div>

@@ -78,6 +78,7 @@ export default function NewVialBatchPage() {
   const [step, setStep]         = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   // Patients
   const [patients, setPatients]     = useState<Patient[]>([]);
@@ -154,24 +155,25 @@ export default function NewVialBatchPage() {
   // ── Navigation ──────────────────────────────────────────────────────────────
 
   function goNext() {
+    setStepError(null);
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
     if (step === 2) setVialPreviews(buildVialPreviews());
     setStep((s) => Math.min(s + 1, 4));
   }
 
-  function goBack() { setStep((s) => Math.max(s - 1, 1)); }
+  function goBack() { setStep((s) => Math.max(s - 1, 1)); setStepError(null); }
 
   function validateStep1(): boolean {
-    if (!patientId) { alert('Please select a patient.'); return false; }
-    if (!preparedBy.trim()) { alert('Prepared By is required.'); return false; }
+    if (!patientId) { setStepError('Please select a patient.'); return false; }
+    if (!preparedBy.trim()) { setStepError('Prepared By is required.'); return false; }
     return true;
   }
 
   function validateStep2(): boolean {
-    if (mixEntries.length === 0) { alert('Add at least one allergen.'); return false; }
+    if (mixEntries.length === 0) { setStepError('Add at least one allergen to the mix.'); return false; }
     const hasHardError = safetyWarnings.some((w) => w.level === 'error');
-    if (hasHardError) { alert('Fix safety errors before proceeding.'); return false; }
+    if (hasHardError) { setStepError('Fix safety errors before proceeding.'); return false; }
     return true;
   }
 
@@ -607,7 +609,12 @@ export default function NewVialBatchPage() {
         )}
 
         {/* Navigation buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
+        {stepError && (
+          <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '10px 14px', marginTop: 12, fontSize: 13, border: '1px solid #fecaca' }}>
+            {stepError}
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
           <button className="btn btn-secondary" onClick={goBack} disabled={step === 1}>
             ← Back
           </button>

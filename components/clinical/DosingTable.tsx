@@ -17,6 +17,7 @@ interface DosingTableProps {
   rows: DosingRow[];
   editable?: boolean;
   onUpdate?: (id: string, field: 'reaction' | 'notes', value: string) => void;
+  onMarkAdministered?: (id: string, administered: boolean) => void;
 }
 
 const statusStyle: Record<string, { bg: string; color: string }> = {
@@ -26,7 +27,7 @@ const statusStyle: Record<string, { bg: string; color: string }> = {
   Reacted: { bg: '#ffebee', color: '#c62828' },
 };
 
-export default function DosingTable({ rows, editable = false, onUpdate }: DosingTableProps) {
+export default function DosingTable({ rows, editable = false, onUpdate, onMarkAdministered }: DosingTableProps) {
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'reaction' | 'notes' } | null>(null);
   const [editValue, setEditValue] = useState('');
 
@@ -63,6 +64,7 @@ export default function DosingTable({ rows, editable = false, onUpdate }: Dosing
             <th>Status</th>
             <th>Reaction</th>
             <th>Notes</th>
+            {onMarkAdministered && <th>Action</th>}
           </tr>
         </thead>
         <tbody>
@@ -127,6 +129,25 @@ export default function DosingTable({ rows, editable = false, onUpdate }: Dosing
                     </span>
                   )}
                 </td>
+                {onMarkAdministered && (
+                  <td>
+                    {row.status === 'Completed' ? (
+                      <button
+                        style={{ fontSize: 11, padding: '2px 8px', background: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db', cursor: 'pointer' }}
+                        onClick={() => onMarkAdministered(row.id, false)}
+                      >
+                        Undo
+                      </button>
+                    ) : (
+                      <button
+                        style={{ fontSize: 11, padding: '2px 8px', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', cursor: 'pointer' }}
+                        onClick={() => onMarkAdministered(row.id, true)}
+                      >
+                        ✓ Administer
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}

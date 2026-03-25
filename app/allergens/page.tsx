@@ -23,6 +23,7 @@ export default function AllergensPage() {
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [saving, setSaving]       = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [search, setSearch]       = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
@@ -43,15 +44,17 @@ export default function AllergensPage() {
   const set = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
   const handleAdd = async () => {
-    if (!form.name) return;
+    setSaveError(null);
+    if (!form.name.trim()) { setSaveError('Name is required.'); return; }
+    if (!form.type) { setSaveError('Type is required.'); return; }
     setSaving(true);
     try {
       const res = await fetch('/api/allergens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name,
-          type: form.type || 'Other',
+          name: form.name.trim(),
+          type: form.type,
           manufacturer: form.manufacturer,
           lotNumber: form.lotNumber,
           stockConcentration: form.stockConcentration,
@@ -61,10 +64,15 @@ export default function AllergensPage() {
       if (res.ok) {
         await loadAllergens();
         setForm(EMPTY_FORM);
+        setSaveError(null);
         setShowForm(false);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(data.error ?? `Server error (${res.status}).`);
       }
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
+    } catch {
+      setSaveError('Network error. Please try again.');
+    } finally { setSaving(false); }
   };
 
   const filtered = allergens.filter((a) => {
@@ -99,6 +107,11 @@ export default function AllergensPage() {
         {showForm && (
           <div className="card" style={{ marginBottom: 16, background: '#f0f7ff', border: '1px solid #90caf9' }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: '#0055a5' }}>Add New Allergen</h3>
+            {saveError && (
+              <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '8px 12px', fontSize: 13, border: '1px solid #fecaca', marginBottom: 10 }}>
+                {saveError}
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               <div><label className="form-label">Name <span style={{ color: '#c62828' }}>*</span></label><input type="text" className="form-input" value={form.name} onChange={(e) => set('name', e.target.value)} /></div>
               <div><label className="form-label">Type</label><select className="form-input" value={form.type} onChange={(e) => set('type', e.target.value)}><option value="">Select type…</option>{ALLERGEN_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>

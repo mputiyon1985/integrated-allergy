@@ -61,10 +61,35 @@ export default function NewPatientPage() {
   const [error, setError] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
+  // Support ?doctorId= query param pre-population
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const doctorIdParam = params.get('doctorId');
+    if (doctorIdParam) {
+      setForm((f) => ({ ...f, doctorId: doctorIdParam }));
+    }
+  }, []);
+
   useEffect(() => {
     fetch('/api/doctors?active=true')
       .then((r) => r.json())
-      .then((data) => setDoctors(data.doctors ?? []))
+      .then((data) => {
+        const docs: Doctor[] = data.doctors ?? [];
+        setDoctors(docs);
+        // Pre-populate physician name once doctors are loaded
+        const params = new URLSearchParams(window.location.search);
+        const doctorIdParam = params.get('doctorId');
+        if (doctorIdParam) {
+          const doc = docs.find((d) => d.id === doctorIdParam);
+          if (doc) {
+            setForm((f) => ({
+              ...f,
+              doctorId: doctorIdParam,
+              physician: `${doc.title} ${doc.name}`,
+            }));
+          }
+        }
+      })
       .catch(() => setDoctors([]));
   }, []);
 
@@ -90,13 +115,13 @@ export default function NewPatientPage() {
 
       if (res.ok) {
         const data = await res.json();
-        router.push(`/patients/${data.id || data.patient?.id || '1'}`);
+        router.push(`/patients/${data.id || data.patient?.id}`);
       } else {
-        // In development without backend, just redirect to patients list
-        router.push('/patients');
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setError(data.error ?? `Server error (${res.status}). Please try again.`);
       }
     } catch {
-      router.push('/patients');
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
