@@ -1,8 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '@/components/layout/TopBar';
+
+interface Doctor {
+  id: string;
+  name: string;
+  title: string;
+  specialty: string;
+  active: boolean;
+}
 
 interface PatientFormData {
   firstName: string;
@@ -10,6 +18,7 @@ interface PatientFormData {
   dob: string;
   patientId: string;
   physician: string;
+  doctorId: string;
   clinicLocation: string;
   diagnosis: string;
   startDate: string;
@@ -25,6 +34,7 @@ const EMPTY_FORM: PatientFormData = {
   dob: '',
   patientId: '',
   physician: '',
+  doctorId: '',
   clinicLocation: '',
   diagnosis: '',
   startDate: '',
@@ -34,7 +44,6 @@ const EMPTY_FORM: PatientFormData = {
   notes: '',
 };
 
-const PHYSICIANS = ['Dr. Patel', 'Dr. Thompson', 'Dr. Kim', 'Dr. Rivera', 'Dr. Chen'];
 const LOCATIONS = ['Main Clinic — Dumfries, VA', 'North Branch — Woodbridge, VA', 'South Branch — Stafford, VA'];
 const DIAGNOSES = [
   'Allergic Rhinitis',
@@ -50,6 +59,14 @@ export default function NewPatientPage() {
   const [form, setForm] = useState<PatientFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  useEffect(() => {
+    fetch('/api/doctors?active=true')
+      .then((r) => r.json())
+      .then((data) => setDoctors(data.doctors ?? []))
+      .catch(() => setDoctors([]));
+  }, []);
 
   const set = (field: keyof PatientFormData, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -208,14 +225,21 @@ export default function NewPatientPage() {
                 <label className="form-label">Physician <span style={{ color: '#c62828' }}>*</span></label>
                 <select
                   className="form-input"
-                  value={form.physician}
-                  onChange={(e) => set('physician', e.target.value)}
+                  value={form.doctorId}
+                  onChange={(e) => {
+                    const doc = doctors.find((d) => d.id === e.target.value);
+                    set('doctorId', e.target.value);
+                    set('physician', doc ? `${doc.title} ${doc.name}` : '');
+                  }}
                   required
                 >
                   <option value="">Select physician…</option>
-                  {PHYSICIANS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id}>{d.title} {d.name}</option>
                   ))}
+                  {doctors.length === 0 && (
+                    <option disabled>No active doctors — add one in Doctors section</option>
+                  )}
                 </select>
               </div>
               <div>

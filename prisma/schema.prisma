@@ -21,12 +21,30 @@ model Patient {
   startDate       DateTime
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  doctorId        String?
+  doctor          Doctor?  @relation(fields: [doctorId], references: [id])
 
   allergenMixes   AllergenMix[]
   vials           Vial[]
   dosingSchedules DosingSchedule[]
   auditLogs       AuditLog[]
   appointments    Appointment[]
+}
+
+model Doctor {
+  id             String   @id @default(cuid())
+  name           String
+  title          String   @default("MD")
+  specialty      String   @default("Allergy & Immunology")
+  email          String?
+  phone          String?
+  clinicLocation String?
+  npi            String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  patients       Patient[]
 }
 
 model Allergen {

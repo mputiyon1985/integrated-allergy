@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       dob: string;
       patientId?: string;
       physician: string;
+      doctorId?: string;
       clinicLocation?: string;
       diagnosis?: string;
       startDate?: string;
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
         clinicLocation: body.clinicLocation ?? '',
         diagnosis: body.diagnosis ?? '',
         startDate: body.startDate ? new Date(body.startDate) : new Date(),
+        ...(body.doctorId ? { doctorId: body.doctorId } : {}),
       },
     });
 

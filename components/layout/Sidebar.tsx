@@ -52,6 +52,18 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Doctors',
+    href: '/doctors',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+        <path d="M16 3.5c1.5.8 2.5 2.3 2.5 4" />
+        <path d="M18.5 12H22M20.25 10.25v3.5" />
+      </svg>
+    ),
+  },
+  {
     label: 'Vial Prep',
     href: '/vial-prep',
     icon: (
