@@ -723,12 +723,7 @@ export default function PatientDetailPage() {
           ];
 
           // Column layout: 3 columns, 2 groups each (desktop)
-          const col1 = sortedGroupKeys.slice(0, 1);
-          const col2 = sortedGroupKeys.slice(1, 2);
-          const col3 = sortedGroupKeys.slice(2, 3);
-          const col4 = sortedGroupKeys.slice(3, 4);
-          const col5 = sortedGroupKeys.slice(4, 5);
-          const col6 = sortedGroupKeys.slice(5);
+          // All groups rendered flat in a CSS grid auto-fill
 
           const totalSelected = Object.keys(gridChecked).length;
           const totalVolume = Object.values(gridChecked).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
@@ -915,13 +910,8 @@ export default function PatientDetailPage() {
                 {allergenOptions.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
-                    <div>{col1.map(renderGroup)}</div>
-                    <div>{col2.map(renderGroup)}</div>
-                    <div>{col3.map(renderGroup)}</div>
-                    <div>{col4.map(renderGroup)}</div>
-                    <div>{col5.map(renderGroup)}</div>
-                    <div>{col6.map(renderGroup)}</div>
+                  <div style={{ columns: '120px auto', columnGap: 12 }}>
+                    {sortedGroupKeys.map(renderGroup)}
                   </div>
                 )}
               </div>
