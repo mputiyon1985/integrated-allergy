@@ -73,6 +73,7 @@ function Avatar({ name, photoUrl, size = 40 }: { name: string; photoUrl: string 
       flexShrink: 0,
     }}>
       {photoUrl
+        // eslint-disable-next-line @next/next/no-img-element
         ? <img src={photoUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         : <span style={{ color: '#fff', fontWeight: 700, fontSize: size * 0.35 }}>{initials}</span>
       }
@@ -397,6 +398,7 @@ export default function DoctorsPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {photoPreview
+                      // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : form.name
                         ? <span style={{ fontSize: 28, color: '#fff', fontWeight: 700 }}>{getInitials(form.name)}</span>

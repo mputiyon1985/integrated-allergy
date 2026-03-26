@@ -478,7 +478,7 @@ export default function NewVialBatchPage() {
                 <button className="btn btn-primary btn-sm" onClick={() => setShowAllergenPicker(true)}>+ Add Allergen</button>
               </div>
               {mixEntries.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens added yet. Click "+ Add Allergen" to begin.</div>
+                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens added yet. Click &quot;+ Add Allergen&quot; to begin.</div>
               ) : (
                 <table className="clinical-table">
                   <thead>

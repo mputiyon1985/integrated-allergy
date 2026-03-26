@@ -211,6 +211,7 @@ export default function PatientDetailPage() {
       }
     };
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientDbId]);
 
   // ── Add allergen ────────────────────────────────────────────────────────────
@@ -1025,7 +1026,7 @@ export default function PatientDetailPage() {
                 <h3 style={{ fontSize: 13, fontWeight: 700 }}>Dosing Schedule — click Reaction/Notes cells to edit</h3>
               </div>
               {dosing.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No dosing schedule yet. Generate vials first, then click "Generate Build-Up Schedule".</div>
+                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No dosing schedule yet. Generate vials first, then click &quot;Generate Build-Up Schedule&quot;.</div>
               ) : (
                 <DosingTable rows={dosing} editable onUpdate={handleDosingUpdate} onMarkAdministered={handleMarkAdministered} />
               )}

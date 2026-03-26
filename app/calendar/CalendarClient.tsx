@@ -362,7 +362,7 @@ export default function CalendarPage() {
       {/* ── Appointment Modal ── */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); router.replace('/calendar'); } }}>
-          <div style={{ background: '#fff', width: '100%', maxWidth: 680, maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: 680, maxHeight: '96vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {/* Modal header */}
             <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0055a5' }}>
               <h2 style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>
