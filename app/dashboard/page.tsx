@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import TopBar from '@/components/layout/TopBar';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import type { DashboardStats, KpiDef } from '@/components/dashboard/types';
@@ -85,16 +86,16 @@ const DEFAULT_LAYOUT = {
   ],
 };
 
-function loadLayout() {
+function loadLayout(): ResponsiveLayouts {
   try {
     if (!isBrowser()) return DEFAULT_LAYOUT;
     const s = localStorage.getItem(LAYOUT_KEY);
-    if (s) return JSON.parse(s);
+    if (s) return JSON.parse(s) as ResponsiveLayouts;
   } catch {}
   return DEFAULT_LAYOUT;
 }
 
-function saveLayout(layouts: object) {
+function saveLayout(layouts: ResponsiveLayouts) {
   try {
     if (!isBrowser()) return;
     localStorage.setItem(LAYOUT_KEY, JSON.stringify(layouts));
@@ -202,11 +203,10 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [layouts, setLayouts]   = useState<object>(DEFAULT_LAYOUT);
+  const [layouts, setLayouts]   = useState<ResponsiveLayouts>(() => loadLayout());
   const [mounted, setMounted]   = useState(false);
 
   useEffect(() => {
-    setLayouts(loadLayout());
     setMounted(true);
   }, []);
 
@@ -230,7 +230,7 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  const handleLayoutChange = useCallback((_layout: unknown, allLayouts: object) => {
+  const handleLayoutChange = useCallback((_layout: Layout, allLayouts: ResponsiveLayouts) => {
     setLayouts(allLayouts);
     saveLayout(allLayouts);
   }, []);

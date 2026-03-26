@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
+import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { KpiCard } from './KpiCard';
@@ -10,9 +10,9 @@ import type { DashboardStats, KpiDef } from './types';
 interface Props {
   stats: DashboardStats;
   kpiDefs: KpiDef[];
-  layouts: object;
+  layouts: ResponsiveLayouts;
   editMode: boolean;
-  onLayoutChange: (layout: unknown, allLayouts: object) => void;
+  onLayoutChange: (layout: Layout, allLayouts: ResponsiveLayouts) => void;
 }
 
 export default function DraggableKpiGrid({
@@ -29,8 +29,8 @@ export default function DraggableKpiGrid({
       {width > 0 && (
         <ResponsiveGridLayout
           width={width}
-          layouts={layouts as any}
-          onLayoutChange={onLayoutChange as any}
+          layouts={layouts}
+          onLayoutChange={onLayoutChange}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 8, md: 6, sm: 4, xs: 2, xxs: 2 }}
           rowHeight={40}

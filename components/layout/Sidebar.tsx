@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
@@ -146,10 +147,13 @@ export default function Sidebar() {
     <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
       {/* Clinic branding */}
       <div style={{ padding: '10px 0 10px 8px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
-        <img
+        <Image
           src="/integrated-allergy-logo.jpg"
           alt={sidebarSettings.clinic_name}
+          width={160}
+          height={55}
           style={{ height: 55, width: 'auto', display: 'block' }}
+          priority
         />
         <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 8, paddingLeft: 2 }}>
           {sidebarSettings.version_label}

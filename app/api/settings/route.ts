@@ -59,6 +59,16 @@ export async function PUT(req: NextRequest) {
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt
       `;
     }
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'Settings Updated',
+        entity: 'Settings',
+        entityId: 'global',
+        details: `Updated ${body.length} setting(s): ${body.map((b) => b.key).join(', ')}`,
+      },
+    }).catch(() => { /* non-fatal: settings save should succeed even if audit log fails */ });
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('PUT /api/settings error:', err);

@@ -120,8 +120,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (err) {
     console.error('POST /api/patients error:', err);
-    // Fallback for demo without DB
-    const id = `demo-${Date.now()}`;
-    return NextResponse.json({ id, patientId: 'PA-NEW' }, { status: 201 });
+    return NextResponse.json({ error: 'Failed to create patient' }, { status: 500 });
   }
 }

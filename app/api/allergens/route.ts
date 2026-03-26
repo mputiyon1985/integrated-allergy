@@ -69,6 +69,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await prisma.auditLog.create({
+      data: {
+        action: 'Allergen Created',
+        entity: 'Allergen',
+        entityId: allergen.id,
+        details: `Allergen added to library: ${allergen.name}`,
+      },
+    });
+
     return NextResponse.json(
       {
         id: allergen.id,

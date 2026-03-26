@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import TopBar from '@/components/layout/TopBar';
 
 // Draggable grid — client-only (react-grid-layout uses useContainerWidth)
@@ -50,7 +51,7 @@ const TILE_IDS: TileId[] = [
   'locations', 'diagnoses', 'doctor-titles', 'nurse-titles',
 ];
 
-function makeDefaultLayouts() {
+function makeDefaultLayouts(): ResponsiveLayouts {
   // 3-col desktop grid: each tile is 1 wide, auto height (h=1 for collapsed, grid adjusts)
   const ids = TILE_IDS;
   const lg  = ids.map((id, i) => ({ i: id, x: i % 3, y: Math.floor(i / 3), w: 1, h: 1 }));
@@ -62,16 +63,16 @@ function makeDefaultLayouts() {
 
 function isBrowser() { return typeof window !== 'undefined'; }
 
-function loadLayouts() {
+function loadLayouts(): ResponsiveLayouts {
   try {
     if (!isBrowser()) return makeDefaultLayouts();
     const s = localStorage.getItem(LAYOUT_KEY);
-    if (s) return JSON.parse(s);
+    if (s) return JSON.parse(s) as ResponsiveLayouts;
   } catch {}
   return makeDefaultLayouts();
 }
 
-function saveLayouts(l: object) {
+function saveLayouts(l: ResponsiveLayouts) {
   try { if (isBrowser()) localStorage.setItem(LAYOUT_KEY, JSON.stringify(l)); } catch {}
 }
 
@@ -141,7 +142,7 @@ function SaveBar({ saving, saved, error, onSave }: {
 // ─── Tile wrapper ─────────────────────────────────────────────────────────────
 
 function SettingsTile({
-  id, icon, title, description, open, onToggle, editMode, children,
+  id: _id, icon, title, description, open, onToggle, editMode, children,
 }: {
   id: TileId; icon: string; title: string; description: string;
   open: boolean; onToggle: () => void; editMode: boolean; children: React.ReactNode;
@@ -316,12 +317,11 @@ export default function SettingsPage() {
   const [openTile, setOpenTile] = useState<TileId | null>(null);
   const [doctors, setDoctors]   = useState<Doctor[]>([]);
   const [editMode, setEditMode] = useState(false);
-  const [layouts, setLayouts]   = useState<Record<string, unknown[]>>(makeDefaultLayouts());
+  const [layouts, setLayouts]   = useState<ResponsiveLayouts>(() => loadLayouts());
 
   useEffect(() => {
-    setLayouts(loadLayouts());
     Promise.all([
-      fetch('/api/settings').then((r) => r.json()),
+      fetch('/api/settings').then((r) => r.json()).catch(() => ({})),
       fetch('/api/doctors?active=true').then((r) => r.json()).catch(() => ({ doctors: [] })),
     ]).then(([s, d]) => {
       setSettings(s as Settings);
@@ -335,7 +335,7 @@ export default function SettingsPage() {
     setOpenTile((prev) => (prev === id ? null : id));
   }, [editMode]);
 
-  const handleLayoutChange = useCallback((_layout: unknown, allLayouts: Record<string, unknown[]>) => {
+  const handleLayoutChange = useCallback((_layout: Layout, allLayouts: ResponsiveLayouts) => {
     setLayouts(allLayouts);
     saveLayouts(allLayouts);
   }, []);
@@ -437,7 +437,7 @@ export default function SettingsPage() {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', marginBottom: 4 }}>⚙️ Admin Control Center</h2>
           <p style={{ fontSize: 13, color: '#6b7280' }}>
             Configure your IMS settings. Click any tile to expand it.
-            {editMode && <strong style={{ color: '#b45309' }}> Drag tiles to rearrange. Click "Done Editing" when finished.</strong>}
+            {editMode && <strong style={{ color: '#b45309' }}> Drag tiles to rearrange. Click &ldquo;Done Editing&rdquo; when finished.</strong>}
           </p>
         </div>
 
