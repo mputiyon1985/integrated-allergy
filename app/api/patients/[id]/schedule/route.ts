@@ -20,6 +20,10 @@ import { generateBuildupSchedule } from '@/lib/clinical/dilution'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params

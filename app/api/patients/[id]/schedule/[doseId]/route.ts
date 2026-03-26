@@ -15,6 +15,10 @@ import prisma from '@/lib/db';
 
 type RouteParams = { params: Promise<{ id: string; doseId: string }> };
 
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { id, doseId } = await params;
   try {
