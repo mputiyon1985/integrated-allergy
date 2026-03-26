@@ -362,7 +362,7 @@ export default function CalendarPage() {
       {/* ── Appointment Modal ── */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); router.replace('/calendar'); } }}>
-          <div style={{ background: '#fff', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: 680, maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {/* Modal header */}
             <div style={{ padding: '14px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0055a5' }}>
               <h2 style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>
@@ -659,7 +659,7 @@ function WeekView({ date, appointments, onSlotClick, onApptClick }: {
               return (
                 <div
                   key={`${ds}-${h}`}
-                  onClick={() => { const d2 = `${ds}T${String(h).padStart(2,'0')}:00`; onSlotClick(ds); }}
+                  onClick={() => { onSlotClick(ds); }}
                   style={{ minHeight: 40, borderBottom: '1px solid #f0f2f5', borderLeft: '1px solid #f0f2f5', padding: '2px 3px', cursor: 'pointer', background: fmt(new Date()) === ds ? '#fafeff' : undefined }}
                   onMouseEnter={(e) => (e.currentTarget as HTMLDivElement).style.background = '#f0f7ff'}
                   onMouseLeave={(e) => (e.currentTarget as HTMLDivElement).style.background = fmt(new Date()) === ds ? '#fafeff' : '#fff'}

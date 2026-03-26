@@ -140,9 +140,9 @@ export default function PatientDetailPage() {
   const [doctorOptions, setDoctorOptions]     = useState<DoctorOption[]>([]);
 
   // Allergen add form
-  const [showAddAllergen, setShowAddAllergen] = useState(false);
+  const [_showAddAllergen, setShowAddAllergen] = useState(false);
   const [newAllergen, setNewAllergen]         = useState({ name: '', type: '', concentration: '', volume: '' });
-  const [addingAllergen, setAddingAllergen]   = useState(false);
+  const [_addingAllergen, setAddingAllergen]   = useState(false);
   const [allergenError, setAllergenError]     = useState<string | null>(null);
   const [allergenOptions, setAllergenOptions] = useState<{ id: string; name: string; type: string; stockConcentration: string }[]>([]);
 
@@ -214,7 +214,7 @@ export default function PatientDetailPage() {
   }, [patientDbId]);
 
   // ── Add allergen ────────────────────────────────────────────────────────────
-  const handleAddAllergen = async () => {
+  const _handleAddAllergen = async () => {
     setAllergenError(null);
     if (!selectedAllergenId) { setAllergenError('Please select an allergen.'); return; }
     const volumeNum = parseFloat(selectedAllergenVolume);
@@ -246,7 +246,7 @@ export default function PatientDetailPage() {
   };
 
   // ── Legacy manual allergen add (fallback) ───────────────────────────────────
-  const handleAddAllergenManual = async () => {
+  const _handleAddAllergenManual = async () => {
     if (!newAllergen.name) return;
     setAddingAllergen(true);
     setAllergenError(null);
