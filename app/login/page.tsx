@@ -40,7 +40,7 @@ export default function LoginPage() {
 
       // MFA disabled globally — direct login
       if (data.success) {
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
         return;
       }
 
@@ -85,7 +85,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -113,7 +113,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch {
       setError('Network error. Please try again.');
     } finally {
