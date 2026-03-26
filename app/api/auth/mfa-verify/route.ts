@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import speakeasy from 'speakeasy';
 import { verifyJWT, setSessionCookie, TempTokenPayload, UserContext } from '@/lib/auth/session';
-import { getUserById, getUserLocationIds } from '@/lib/auth/turso';
+import { getUserById, getUserLocationIds, getDoctorById, getNurseById } from '@/lib/auth/turso';
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,6 +34,17 @@ export async function POST(req: NextRequest) {
 
     const locationIds = await getUserLocationIds(user.id);
 
+    let doctorName: string | null = null;
+    let nurseTitle: string | null = null;
+    if (user.doctorId) {
+      const doctor = await getDoctorById(user.doctorId);
+      if (doctor) doctorName = `${doctor.name}, ${doctor.title}`;
+    }
+    if (user.nurseId) {
+      const nurse = await getNurseById(user.nurseId);
+      if (nurse) nurseTitle = `${nurse.name}, ${nurse.title}`;
+    }
+
     const userContext: UserContext = {
       userId: user.id,
       role: user.role,
@@ -41,6 +52,10 @@ export async function POST(req: NextRequest) {
       locationIds,
       name: user.name,
       email: user.email,
+      doctorId: user.doctorId ?? null,
+      nurseId: user.nurseId ?? null,
+      doctorName,
+      nurseTitle,
     };
 
     await setSessionCookie(userContext);

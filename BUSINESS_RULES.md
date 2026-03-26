@@ -63,5 +63,18 @@ Update this file whenever a new rule is added or changed.
 
 ---
 
+---
+
+## Identity Cross-Reference
+
+- Every AppUser CAN be linked to a Doctor or Nurse profile (doctorId/nurseId)
+- This link is bidirectional: Doctor.appUserId ↔ AppUser.doctorId
+- When Rob the doctor logs in, the system knows he IS Dr. Rob Sikora, MD
+- Clinical actions (scheduling, dosing, vial prep) can auto-populate the provider field
+- Audit logs show clinical identity ("Dr. Rob Sikora" not just "user_abc123")
+- The Sidebar footer displays the logged-in user's clinical identity (doctorName or nurseTitle) when linked
+
+---
+
 _Last updated: 2026-03-26_
 _Maintainer: Pepper (AI) + Mark Putiyon_

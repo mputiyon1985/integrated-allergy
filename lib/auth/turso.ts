@@ -79,6 +79,8 @@ export interface AppUserRow {
   mfaSecret: string | null;
   mfaEnabled: number;
   active: number;
+  doctorId: string | null;
+  nurseId: string | null;
 }
 
 export interface UserLocationRow {
@@ -87,7 +89,7 @@ export interface UserLocationRow {
 
 export async function getUserByEmail(email: string): Promise<AppUserRow | null> {
   const result = await tursoQuery(
-    'SELECT id, email, passwordHash, name, role, entityId, mfaSecret, mfaEnabled, active FROM AppUser WHERE email = ? AND deletedAt IS NULL',
+    'SELECT id, email, passwordHash, name, role, entityId, mfaSecret, mfaEnabled, active, doctorId, nurseId FROM AppUser WHERE email = ? AND deletedAt IS NULL',
     [email]
   );
   const rows = rowToObject(result);
@@ -97,12 +99,32 @@ export async function getUserByEmail(email: string): Promise<AppUserRow | null> 
 
 export async function getUserById(id: string): Promise<AppUserRow | null> {
   const result = await tursoQuery(
-    'SELECT id, email, passwordHash, name, role, entityId, mfaSecret, mfaEnabled, active FROM AppUser WHERE id = ? AND deletedAt IS NULL',
+    'SELECT id, email, passwordHash, name, role, entityId, mfaSecret, mfaEnabled, active, doctorId, nurseId FROM AppUser WHERE id = ? AND deletedAt IS NULL',
     [id]
   );
   const rows = rowToObject(result);
   if (rows.length === 0) return null;
   return rows[0] as unknown as AppUserRow;
+}
+
+export async function getDoctorById(doctorId: string): Promise<{ name: string; title: string } | null> {
+  const result = await tursoQuery(
+    'SELECT name, title FROM Doctor WHERE id = ? AND deletedAt IS NULL',
+    [doctorId]
+  );
+  const rows = rowToObject(result);
+  if (rows.length === 0) return null;
+  return { name: rows[0].name as string, title: rows[0].title as string };
+}
+
+export async function getNurseById(nurseId: string): Promise<{ name: string; title: string } | null> {
+  const result = await tursoQuery(
+    'SELECT name, title FROM Nurse WHERE id = ? AND deletedAt IS NULL',
+    [nurseId]
+  );
+  const rows = rowToObject(result);
+  if (rows.length === 0) return null;
+  return { name: rows[0].name as string, title: rows[0].title as string };
 }
 
 export async function getUserLocationIds(userId: string): Promise<string[]> {

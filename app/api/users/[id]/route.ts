@@ -82,6 +82,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.role !== undefined) updateData.role = body.role;
     if (body.entityId !== undefined) updateData.entityId = body.entityId || null;
     if (body.active !== undefined) updateData.active = body.active;
+    if (body.doctorId !== undefined) updateData.doctorId = body.doctorId || null;
+    if (body.nurseId !== undefined) updateData.nurseId = body.nurseId || null;
 
     const user = await prisma.appUser.update({
       where: { id },

@@ -16,6 +16,10 @@ export interface UserContext {
   locationIds: string[];
   name: string;
   email: string;
+  doctorId?: string | null;
+  nurseId?: string | null;
+  doctorName?: string | null;
+  nurseTitle?: string | null;
 }
 
 export interface TempTokenPayload {

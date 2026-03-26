@@ -42,6 +42,8 @@ model AppUser {
   active         Boolean              @default(true)
   createdAt      DateTime             @default(now())
   deletedAt      DateTime?
+  doctorId       String?
+  nurseId        String?
   locationAccess UserLocationAccess[]
 }
 
@@ -97,6 +99,7 @@ model Doctor {
   updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
   entityId       String?
+  appUserId      String?
   entity         BusinessEntity? @relation(fields: [entityId], references: [id])
 
   patients Patient[]
@@ -205,6 +208,7 @@ model Nurse {
   updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
   entityId       String?
+  appUserId      String?
   entity         BusinessEntity? @relation(fields: [entityId], references: [id])
 }
 

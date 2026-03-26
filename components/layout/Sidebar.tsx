@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 interface AuthMe {
-  user: { role: string } | null;
+  user: { role: string; name: string; doctorName: string | null; nurseTitle: string | null } | null;
 }
 
 interface SidebarSettings {
@@ -132,6 +132,7 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
   const pathname = usePathname();
   const [sidebarSettings, setSidebarSettings] = useState<SidebarSettings>(DEFAULTS);
   const [_userRole, setUserRole] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ role: string; name: string; doctorName: string | null; nurseTitle: string | null } | null>(null);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -148,6 +149,7 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
       .then((r) => r.ok ? r.json() : null)
       .then((data: AuthMe | null) => {
         setUserRole(data?.user?.role ?? null);
+        setCurrentUser(data?.user ?? null);
       })
       .catch(() => {});
   }, []);
@@ -265,8 +267,17 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
 
       {/* Footer */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', color: '#9ca3af', fontSize: 11, flexShrink: 0 }}>
+        {currentUser && (
+          <>
+            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }}>
+              {currentUser.doctorName ?? currentUser.nurseTitle ?? currentUser.name ?? ''}
+            </div>
+            <div style={{ fontSize: 10, color: '#c8d3e8', marginBottom: 4 }}>
+              {currentUser.role === 'super_admin' ? '🔑 Super Admin' : currentUser.role}
+            </div>
+          </>
+        )}
         <div>© 2026 {sidebarSettings.clinic_name}</div>
-        <div style={{ marginTop: 2 }}>Clinical IMS Platform</div>
       </div>
     </>
   );

@@ -16,6 +16,10 @@ export async function GET() {
         role: user.role,
         entityId: user.entityId,
         locationIds: user.locationIds,
+        doctorId: user.doctorId ?? null,
+        nurseId: user.nurseId ?? null,
+        doctorName: user.doctorName ?? null,
+        nurseTitle: user.nurseTitle ?? null,
       },
     });
   } catch (error) {

@@ -83,6 +83,8 @@ export async function POST(req: NextRequest) {
         role: body.role ?? 'location_staff',
         entityId: body.entityId || null,
         active: body.active ?? true,
+        doctorId: body.doctorId || null,
+        nurseId: body.nurseId || null,
       },
     });
 

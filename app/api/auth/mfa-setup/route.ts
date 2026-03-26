@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { verifyJWT, setSessionCookie, TempTokenPayload, UserContext } from '@/lib/auth/session';
-import { getUserById, getUserLocationIds, setMfaSecret } from '@/lib/auth/turso';
+import { getUserById, getUserLocationIds, setMfaSecret, getDoctorById, getNurseById } from '@/lib/auth/turso';
 
 // GET /api/auth/mfa-setup — generate TOTP secret + QR code
 export async function GET(req: NextRequest) {
@@ -77,6 +77,17 @@ export async function POST(req: NextRequest) {
 
     const locationIds = await getUserLocationIds(user.id);
 
+    let doctorName: string | null = null;
+    let nurseTitle: string | null = null;
+    if (user.doctorId) {
+      const doctor = await getDoctorById(user.doctorId);
+      if (doctor) doctorName = `${doctor.name}, ${doctor.title}`;
+    }
+    if (user.nurseId) {
+      const nurse = await getNurseById(user.nurseId);
+      if (nurse) nurseTitle = `${nurse.name}, ${nurse.title}`;
+    }
+
     const userContext: UserContext = {
       userId: user.id,
       role: user.role,
@@ -84,6 +95,10 @@ export async function POST(req: NextRequest) {
       locationIds,
       name: user.name,
       email: user.email,
+      doctorId: user.doctorId ?? null,
+      nurseId: user.nurseId ?? null,
+      doctorName,
+      nurseTitle,
     };
 
     await setSessionCookie(userContext);

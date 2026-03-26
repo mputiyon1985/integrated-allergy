@@ -1650,11 +1650,12 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
   const [nurses, setNurses] = useState<{ id: string; name: string; title: string; email: string | null; entityId: string | null }[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'location_staff', entityId: '', locationIds: [] as string[], active: true });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'location_staff', entityId: '', locationIds: [] as string[], active: true, doctorId: '', nurseId: '' });
   const [importValue, setImportValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; tempPassword: string; doctorName?: string | null } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1682,13 +1683,13 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: '', email: '', password: '', role: 'location_staff', entityId: '', locationIds: [], active: true });
+    setForm({ name: '', email: '', password: '', role: 'location_staff', entityId: '', locationIds: [], active: true, doctorId: '', nurseId: '' });
     setImportValue(''); setFormError(null); setShowModal(true);
   };
 
   const openEdit = (user: UserRow) => {
     setEditing(user);
-    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active });
+    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active, doctorId: '', nurseId: '' });
     setImportValue(''); setFormError(null); setShowModal(true);
   };
 
@@ -1725,13 +1726,24 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
         ...(form.password ? { password: form.password } : {}),
         role: form.role, entityId: form.entityId || null,
         locationIds: form.locationIds, active: form.active,
+        doctorId: form.doctorId || null,
+        nurseId: form.nurseId || null,
       };
       const url = editing ? `/api/users/${editing.id}` : '/api/users';
       const method = editing ? 'PUT' : 'POST';
       const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await r.json();
       if (!r.ok) { setFormError((data as { error?: string }).error ?? 'Failed to save user'); return; }
-      setShowModal(false); load();
+      setShowModal(false);
+      if (!editing && form.password) {
+        const linkedDoctor = form.doctorId ? doctors.find((d) => d.id === form.doctorId) : null;
+        setCreatedCredentials({
+          email: form.email,
+          tempPassword: form.password,
+          doctorName: linkedDoctor ? `${linkedDoctor.name}, ${linkedDoctor.title}` : null,
+        });
+      }
+      load();
     } catch { setFormError('Network error'); }
     finally { setSaving(false); }
   };
@@ -1845,6 +1857,24 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
                   {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
                 </select>
               </div>
+              {doctors.length > 0 && (
+                <div>
+                  <Label>Link to Doctor Profile</Label>
+                  <select className="form-input" value={form.doctorId} onChange={(e) => setForm((f) => ({ ...f, doctorId: e.target.value, nurseId: '' }))}>
+                    <option value="">— None —</option>
+                    {doctors.map((d) => <option key={d.id} value={d.id}>{d.title} {d.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {nurses.length > 0 && (
+                <div>
+                  <Label>Link to Nurse Profile</Label>
+                  <select className="form-input" value={form.nurseId} onChange={(e) => setForm((f) => ({ ...f, nurseId: e.target.value, doctorId: '' }))}>
+                    <option value="">— None —</option>
+                    {nurses.map((n) => <option key={n.id} value={n.id}>{n.title} {n.name}</option>)}
+                  </select>
+                </div>
+              )}
               {filteredLocations.length > 0 && (
                 <div>
                   <Label>Location Access</Label>
@@ -1869,6 +1899,29 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
             <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Create User'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {createdCredentials && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200 }}>
+          <div style={{ background: '#fff', width: 440, borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+            <div style={{ textAlign: 'center', padding: 24 }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>✅</div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700 }}>User Created</h3>
+              <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: 16, margin: '16px 0', textAlign: 'left' }}>
+                <div style={{ marginBottom: 6 }}><strong>Email:</strong> {createdCredentials.email}</div>
+                <div style={{ marginBottom: 6 }}><strong>Temp Password:</strong> <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 4 }}>{createdCredentials.tempPassword}</code></div>
+                {createdCredentials.doctorName && <div><strong>Clinical Identity:</strong> {createdCredentials.doctorName}</div>}
+              </div>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 16px' }}>Share credentials securely. User must set up MFA on first login.</p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button className="btn btn-secondary" onClick={() => {
+                  const text = `Email: ${createdCredentials.email}\nTemp Password: ${createdCredentials.tempPassword}${createdCredentials.doctorName ? `\nClinical Identity: ${createdCredentials.doctorName}` : ''}`;
+                  navigator.clipboard.writeText(text).catch(() => {});
+                }}>📋 Copy to Clipboard</button>
+                <button className="btn btn-primary" onClick={() => setCreatedCredentials(null)}>Done</button>
+              </div>
             </div>
           </div>
         </div>
