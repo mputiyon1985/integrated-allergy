@@ -255,6 +255,38 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
         </div>
       )}
 
+      {/* Logout button — below identity card */}
+      {currentUser && (
+        <div style={{ margin: '0 8px 4px', flexShrink: 0 }}>
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              window.location.href = '/login';
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: 'transparent',
+              border: '1px solid #e5e7eb',
+              borderRadius: 10,
+              color: '#6b7280',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2'; (e.currentTarget as HTMLButtonElement).style.color = '#dc2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#fca5a5'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b7280'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; }}
+          >
+            <span>⎋</span> Sign Out
+          </button>
+        </div>
+      )}
+
       {/* Settings — pinned at bottom above footer */}
       <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0', flexShrink: 0 }}>
         <Link
