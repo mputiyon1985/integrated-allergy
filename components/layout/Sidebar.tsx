@@ -129,6 +129,7 @@ export default function Sidebar() {
               height: 60,
               display: 'block',
               objectFit: 'contain',
+              mixBlendMode: 'screen',
             }}
           />
           <div style={{ color: '#8a9bbf', fontSize: 10 }}>IMS v2.0 · © 2026</div>
