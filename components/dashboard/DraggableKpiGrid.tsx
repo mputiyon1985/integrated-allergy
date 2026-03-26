@@ -37,7 +37,7 @@ export default function DraggableKpiGrid({
           dragConfig={{ enabled: editMode }}
           resizeConfig={{ enabled: editMode }}
           margin={[16, 16]}
-          containerPadding={[0, 0]}
+          containerPadding={[16, 8]}
         >
           {kpiDefs.map((def) => {
             const value      = def.getValue(stats);
