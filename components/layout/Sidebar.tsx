@@ -131,7 +131,7 @@ export default function Sidebar() {
               objectFit: 'contain',
             }}
           />
-          <div style={{ color: '#9ca3af', fontSize: 10 }}>IMS v2.0 · © 2026</div>
+          <div style={{ color: '#9ca3af', fontSize: 10, paddingLeft: 8 }}>IMS v2.0 · © 2026</div>
         </div>
       </div>
 
