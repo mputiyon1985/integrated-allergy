@@ -155,3 +155,41 @@ model Nurse {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 }
+
+model ClinicLocation {
+  id        String    @id @default(cuid())
+  name      String
+  address   String?
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+model DiagnosisOption {
+  id        String    @id @default(cuid())
+  name      String
+  icdCode   String?
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+model DoctorTitle {
+  id        String    @id @default(cuid())
+  name      String
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+model NurseTitle {
+  id        String    @id @default(cuid())
+  name      String
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+}

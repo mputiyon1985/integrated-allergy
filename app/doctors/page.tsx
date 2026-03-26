@@ -4,12 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
-const TITLES = ['MD', 'DO', 'NP', 'PA', 'Other'];
-const LOCATIONS = [
-  'Main Clinic — Dumfries, VA',
-  'North Branch — Woodbridge, VA',
-  'South Branch — Stafford, VA',
-];
+const FALLBACK_TITLES = ['MD', 'DO', 'NP', 'PA', 'Other'];
+const OTHER_SENTINEL = '__other__';
 
 interface Doctor {
   id: string;
@@ -92,6 +88,26 @@ export default function DoctorsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Doctor | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  // Title dropdown + free-text
+  const [titleOptions, setTitleOptions] = useState<string[]>(FALLBACK_TITLES);
+  const [titleDropdown, setTitleDropdown] = useState('MD');
+  const [titleCustom, setTitleCustom] = useState('');
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+
+  // Load title options + locations once
+  useEffect(() => {
+    fetch('/api/doctor-titles?active=true')
+      .then((r) => r.json())
+      .then((d: { titles: { id: string; name: string }[] }) => {
+        const names = d.titles?.map((t) => t.name) ?? [];
+        setTitleOptions(names.length ? names : FALLBACK_TITLES);
+      })
+      .catch(() => setTitleOptions(FALLBACK_TITLES));
+    fetch('/api/locations?active=true')
+      .then((r) => r.json())
+      .then((d: { locations: { id: string; name: string }[] }) => setLocations(d.locations ?? []))
+      .catch(() => setLocations([]));
+  }, []);
 
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
@@ -123,16 +139,30 @@ export default function DoctorsPage() {
     reader.readAsDataURL(file);
   };
 
+  // Helper: given a title string, compute dropdown value and custom text
+  const titleToState = useCallback((t: string) => {
+    if (titleOptions.includes(t)) {
+      return { drop: t, custom: '' };
+    }
+    return { drop: OTHER_SENTINEL, custom: t };
+  }, [titleOptions]);
+
   const openAdd = () => {
     setEditingDoctor(null);
     setForm(EMPTY_FORM);
     setPhotoPreview('');
     setFormError(null);
+    const { drop, custom } = titleToState('MD');
+    setTitleDropdown(drop);
+    setTitleCustom(custom);
     setShowModal(true);
   };
 
   const openEdit = (doc: Doctor) => {
     setEditingDoctor(doc);
+    const { drop, custom } = titleToState(doc.title);
+    setTitleDropdown(drop);
+    setTitleCustom(custom);
     setForm({
       name: doc.name,
       title: doc.title,
@@ -161,6 +191,10 @@ export default function DoctorsPage() {
       setFormError('Doctor name is required.');
       return;
     }
+    // Resolve title: if dropdown is OTHER_SENTINEL use custom text
+    const resolvedTitle = titleDropdown === OTHER_SENTINEL
+      ? (titleCustom.trim() || 'Other')
+      : titleDropdown;
     setSubmitting(true);
     try {
       const url = editingDoctor ? `/api/doctors/${editingDoctor.id}` : '/api/doctors';
@@ -168,7 +202,7 @@ export default function DoctorsPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, photoUrl: photoPreview }),
+        body: JSON.stringify({ ...form, title: resolvedTitle, photoUrl: photoPreview }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -444,9 +478,33 @@ export default function DoctorsPage() {
                   </div>
                   <div>
                     <label className="form-label">Title</label>
-                    <select className="form-input" value={form.title} onChange={(e) => set('title', e.target.value)}>
-                      {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    <select
+                      className="form-input"
+                      value={titleDropdown}
+                      onChange={(e) => {
+                        setTitleDropdown(e.target.value);
+                        if (e.target.value !== OTHER_SENTINEL) {
+                          setTitleCustom('');
+                          set('title', e.target.value);
+                        }
+                      }}
+                    >
+                      {titleOptions.filter((t) => t !== 'Other').map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                      <option value={OTHER_SENTINEL}>Other (type custom)…</option>
                     </select>
+                    {titleDropdown === OTHER_SENTINEL && (
+                      <input
+                        type="text"
+                        className="form-input"
+                        style={{ marginTop: 6 }}
+                        placeholder="Type custom title…"
+                        value={titleCustom}
+                        onChange={(e) => { setTitleCustom(e.target.value); set('title', e.target.value); }}
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
                 <div>
@@ -485,7 +543,7 @@ export default function DoctorsPage() {
                   <label className="form-label">Clinic Location</label>
                   <select className="form-input" value={form.clinicLocation} onChange={(e) => set('clinicLocation', e.target.value)}>
                     <option value="">Select location…</option>
-                    {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                    {locations.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
                   </select>
                 </div>
                 <div>

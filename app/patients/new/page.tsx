@@ -44,33 +44,17 @@ const EMPTY_FORM: PatientFormData = {
   notes: '',
 };
 
-const DEFAULT_LOCATIONS = ['Main Clinic — Dumfries, VA', 'North Branch — Woodbridge, VA', 'South Branch — Stafford, VA'];
-const DEFAULT_DIAGNOSES = [
-  'Allergic Rhinitis',
-  'Asthma',
-  'Asthma + Allergic Rhinitis',
-  'Allergic Rhinitis + Eczema',
-  'AR + Asthma + Eczema',
-  'Other',
-];
-
-function parseJsonArray(val: string | undefined, fallback: string[]): string[] {
-  if (!val) return fallback;
-  try {
-    const parsed = JSON.parse(val);
-    if (Array.isArray(parsed)) return parsed as string[];
-  } catch { /* ignore */ }
-  return fallback;
-}
+interface ApiLocation { id: string; name: string; address: string | null; }
+interface ApiDiagnosis { id: string; name: string; icdCode: string | null; }
 
 export default function NewPatientPage() {
   const router = useRouter();
   const [form, setForm] = useState<PatientFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
-  const [diagnoses, setDiagnoses] = useState<string[]>(DEFAULT_DIAGNOSES);
+  const [doctors, setDoctors]     = useState<Doctor[]>([]);
+  const [locations, setLocations] = useState<ApiLocation[]>([]);
+  const [diagnoses, setDiagnoses] = useState<ApiDiagnosis[]>([]);
 
   // Support ?doctorId= query param pre-population
   useEffect(() => {
@@ -81,15 +65,16 @@ export default function NewPatientPage() {
     }
   }, []);
 
-  // Load clinic locations and diagnosis options from settings
+  // Load locations and diagnoses from dedicated API tables
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/locations?active=true')
       .then((r) => r.json())
-      .then((data: Record<string, string>) => {
-        setLocations(parseJsonArray(data.clinic_locations, DEFAULT_LOCATIONS));
-        setDiagnoses(parseJsonArray(data.diagnosis_options, DEFAULT_DIAGNOSES));
-      })
-      .catch(() => { /* keep defaults */ });
+      .then((d: { locations: ApiLocation[] }) => setLocations(d.locations ?? []))
+      .catch(() => setLocations([]));
+    fetch('/api/diagnoses?active=true')
+      .then((r) => r.json())
+      .then((d: { diagnoses: ApiDiagnosis[] }) => setDiagnoses(d.diagnoses ?? []))
+      .catch(() => setDiagnoses([]));
   }, []);
 
   useEffect(() => {
@@ -298,7 +283,7 @@ export default function NewPatientPage() {
                 >
                   <option value="">Select location…</option>
                   {locations.map((l) => (
-                    <option key={l} value={l}>{l}</option>
+                    <option key={l.id} value={l.name}>{l.name}</option>
                   ))}
                 </select>
               </div>
@@ -311,7 +296,7 @@ export default function NewPatientPage() {
                 >
                   <option value="">Select diagnosis…</option>
                   {diagnoses.map((d) => (
-                    <option key={d} value={d}>{d}</option>
+                    <option key={d.id} value={d.name}>{d.name}</option>
                   ))}
                 </select>
               </div>

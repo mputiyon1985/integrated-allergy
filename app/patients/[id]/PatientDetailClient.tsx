@@ -38,15 +38,8 @@ interface DoctorOption {
   active: boolean;
 }
 
-const LOCATIONS = ['Main Clinic — Dumfries, VA', 'North Branch — Woodbridge, VA', 'South Branch — Stafford, VA'];
-const DIAGNOSES = [
-  'Allergic Rhinitis',
-  'Asthma',
-  'Asthma + Allergic Rhinitis',
-  'Allergic Rhinitis + Eczema',
-  'AR + Asthma + Eczema',
-  'Other',
-];
+interface ApiLocation { id: string; name: string; }
+interface ApiDiagnosis { id: string; name: string; }
 
 interface AllergenMixItem {
   id: string;
@@ -138,6 +131,8 @@ export default function PatientDetailPage() {
   const [editSaving, setEditSaving]           = useState(false);
   const [editError, setEditError]             = useState<string | null>(null);
   const [doctorOptions, setDoctorOptions]     = useState<DoctorOption[]>([]);
+  const [locationOptions, setLocationOptions] = useState<ApiLocation[]>([]);
+  const [diagnosisOptions, setDiagnosisOptions] = useState<ApiDiagnosis[]>([]);
 
   // Allergen add form
   const [_showAddAllergen, setShowAddAllergen] = useState(false);
@@ -363,6 +358,19 @@ export default function PatientDetailPage() {
       fetch('/api/doctors?active=true')
         .then((r) => r.json())
         .then((d) => setDoctorOptions(d.doctors ?? []))
+        .catch(() => {});
+    }
+    // Load locations + diagnoses from dedicated tables
+    if (locationOptions.length === 0) {
+      fetch('/api/locations?active=true')
+        .then((r) => r.json())
+        .then((d: { locations: ApiLocation[] }) => setLocationOptions(d.locations ?? []))
+        .catch(() => {});
+    }
+    if (diagnosisOptions.length === 0) {
+      fetch('/api/diagnoses?active=true')
+        .then((r) => r.json())
+        .then((d: { diagnoses: ApiDiagnosis[] }) => setDiagnosisOptions(d.diagnoses ?? []))
         .catch(() => {});
     }
   };
@@ -787,7 +795,11 @@ export default function PatientDetailPage() {
                       onChange={(e) => setEditForm((f) => ({ ...f, clinicLocation: e.target.value }))}
                     >
                       <option value="">Select location…</option>
-                      {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                      {locationOptions.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
+                      {/* Preserve existing value even if not in current list */}
+                      {editForm.clinicLocation && !locationOptions.find((l) => l.name === editForm.clinicLocation) && (
+                        <option value={editForm.clinicLocation}>{editForm.clinicLocation}</option>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -798,7 +810,10 @@ export default function PatientDetailPage() {
                       onChange={(e) => setEditForm((f) => ({ ...f, diagnosis: e.target.value }))}
                     >
                       <option value="">Select diagnosis…</option>
-                      {DIAGNOSES.map((d) => <option key={d} value={d}>{d}</option>)}
+                      {diagnosisOptions.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
+                      {editForm.diagnosis && !diagnosisOptions.find((d) => d.name === editForm.diagnosis) && (
+                        <option value={editForm.diagnosis}>{editForm.diagnosis}</option>
+                      )}
                     </select>
                   </div>
                   <div>
