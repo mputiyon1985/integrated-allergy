@@ -40,20 +40,21 @@ interface TitleRow { id: string; name: string; active: boolean; }
 
 type TileId =
   | 'branding' | 'notifications' | 'appearance' | 'clinic' | 'security' | 'export'
-  | 'locations' | 'diagnoses' | 'doctor-titles' | 'nurse-titles';
+  | 'locations' | 'diagnoses' | 'doctor-titles' | 'nurse-titles'
+  | 'entities' | 'entity-locations' | 'users';
 
 // ─── Layout persistence ───────────────────────────────────────────────────────
 
-const LAYOUT_KEY = 'ia-settings-layout-v2';
+const LAYOUT_KEY = 'ia-settings-layout-v3';
 
-const TILE_IDS: TileId[] = [
+const ALL_TILE_IDS: TileId[] = [
   'branding', 'notifications', 'appearance', 'clinic', 'security', 'export',
   'locations', 'diagnoses', 'doctor-titles', 'nurse-titles',
+  'entities', 'entity-locations', 'users',
 ];
 
-function makeDefaultLayouts(): ResponsiveLayouts {
+function makeDefaultLayouts(ids: TileId[]): ResponsiveLayouts {
   // 3-col desktop grid: each tile is 1 wide, auto height (h=1 for collapsed, grid adjusts)
-  const ids = TILE_IDS;
   const lg  = ids.map((id, i) => ({ i: id, x: i % 3, y: Math.floor(i / 3), w: 1, h: 1 }));
   const md  = ids.map((id, i) => ({ i: id, x: i % 2, y: Math.floor(i / 2), w: 1, h: 1 }));
   const sm  = ids.map((id, i) => ({ i: id, x: 0,     y: i,                 w: 1, h: 1 }));
@@ -63,13 +64,13 @@ function makeDefaultLayouts(): ResponsiveLayouts {
 
 function isBrowser() { return typeof window !== 'undefined'; }
 
-function loadLayouts(): ResponsiveLayouts {
+function loadLayouts(ids: TileId[]): ResponsiveLayouts {
   try {
-    if (!isBrowser()) return makeDefaultLayouts();
+    if (!isBrowser()) return makeDefaultLayouts(ids);
     const s = localStorage.getItem(LAYOUT_KEY);
     if (s) return JSON.parse(s) as ResponsiveLayouts;
   } catch {}
-  return makeDefaultLayouts();
+  return makeDefaultLayouts(ids);
 }
 
 function saveLayouts(l: ResponsiveLayouts) {
@@ -207,6 +208,44 @@ function SettingsTile({
   );
 }
 
+// ─── Additional row types ─────────────────────────────────────────────────────
+
+interface EntityRow {
+  id: string;
+  name: string;
+  ein: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  logo: string | null;
+  active: boolean;
+  _count?: { locations: number };
+}
+
+interface EntityLocRow {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  active: boolean;
+  entityId: string | null;
+  entity?: { id: string; name: string } | null;
+}
+
+interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  entityId: string | null;
+  entityName: string | null;
+  locationCount: number;
+  locationIds: string[];
+  active: boolean;
+  mfaEnabled: boolean;
+  createdAt: string;
+}
+
 // ─── Lookup table component (for Locations, Diagnoses, Titles) ────────────────
 
 interface LookupTableProps<T extends { id: string; name: string; active: boolean }> {
@@ -317,15 +356,24 @@ export default function SettingsPage() {
   const [openTile, setOpenTile] = useState<TileId | null>(null);
   const [doctors, setDoctors]   = useState<Doctor[]>([]);
   const [editMode, setEditMode] = useState(false);
-  const [layouts, setLayouts]   = useState<ResponsiveLayouts>(() => loadLayouts());
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [tileIds, setTileIds]   = useState<TileId[]>(ALL_TILE_IDS.filter((id) => id !== 'users'));
+  const [layouts, setLayouts]   = useState<ResponsiveLayouts>(() => loadLayouts(ALL_TILE_IDS.filter((id) => id !== 'users')));
 
   useEffect(() => {
     Promise.all([
       fetch('/api/settings').then((r) => r.json()).catch(() => ({})),
       fetch('/api/doctors?active=true').then((r) => r.json()).catch(() => ({ doctors: [] })),
-    ]).then(([s, d]) => {
+      fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([s, d, me]) => {
       setSettings(s as Settings);
       setDoctors((d as { doctors: Doctor[] }).doctors ?? []);
+      const role = (me as { user?: { role: string } } | null)?.user?.role ?? null;
+      setUserRole(role);
+      // Include 'users' tile only for super_admin
+      const ids = role === 'super_admin' ? ALL_TILE_IDS : ALL_TILE_IDS.filter((id) => id !== 'users');
+      setTileIds(ids);
+      setLayouts(loadLayouts(ids));
       setLoading(false);
     });
   }, []);
@@ -341,7 +389,7 @@ export default function SettingsPage() {
   }, []);
 
   const resetLayout = () => {
-    const def = makeDefaultLayouts();
+    const def = makeDefaultLayouts(tileIds);
     setLayouts(def);
     saveLayouts(def);
   };
@@ -361,7 +409,7 @@ export default function SettingsPage() {
     id, open: openTile === id, onToggle: () => toggleTile(id), editMode,
   });
 
-  const tiles = [
+  const allTileNodes: { id: TileId; node: React.ReactNode }[] = [
     {
       id: 'branding' as TileId,
       node: <BrandingTile {...tileProps('branding')} settings={settings} onSettingsChange={setSettings} />,
@@ -402,7 +450,21 @@ export default function SettingsPage() {
       id: 'nurse-titles' as TileId,
       node: <NurseTitlesTile {...tileProps('nurse-titles')} />,
     },
+    {
+      id: 'entities' as TileId,
+      node: <EntitiesTile {...tileProps('entities')} />,
+    },
+    {
+      id: 'entity-locations' as TileId,
+      node: <EntityLocationsTile {...tileProps('entity-locations')} />,
+    },
+    ...(userRole === 'super_admin' ? [{
+      id: 'users' as TileId,
+      node: <UsersTile {...tileProps('users')} />,
+    }] : []),
   ];
+
+  const tiles = allTileNodes.filter((t) => tileIds.includes(t.id));
 
   return (
     <>
@@ -1122,6 +1184,7 @@ function DoctorTitlesTile({ open, onToggle, editMode }: { open: boolean; onToggl
 }
 
 // ─── TILE 10: Nurse Titles ────────────────────────────────────────────────────
+// (keep existing NurseTitlesTile — new tiles appended below)
 
 function NurseTitlesTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean; }) {
   const [rows, setRows]         = useState<TitleRow[]>([]);
@@ -1201,6 +1264,617 @@ function NurseTitlesTile({ open, onToggle, editMode }: { open: boolean; onToggle
           ) : null
         }
       />
+    </SettingsTile>
+  );
+}
+
+// ─── TILE 11: Entities ────────────────────────────────────────────────────────
+
+const AVATAR_COLORS_ENT = [
+  '#0055a5', '#059669', '#7c3aed', '#b45309', '#dc2626',
+  '#0891b2', '#d97706', '#15803d', '#9333ea', '#1d4ed8',
+];
+
+function entityAvatarColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS_ENT[Math.abs(h) % AVATAR_COLORS_ENT.length];
+}
+
+function EntityAvatar({ name, logo, size = 36 }: { name: string; logo: string | null; size?: number }) {
+  const initials = name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const color = entityAvatarColor(name);
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: logo ? 'transparent' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {logo
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={logo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <span style={{ color: '#fff', fontWeight: 700, fontSize: size * 0.36 }}>{initials}</span>
+      }
+    </div>
+  );
+}
+
+function EntitiesTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean }) {
+  const [rows, setRows] = useState<EntityRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<EntityRow | null>(null);
+  const [form, setForm] = useState({ name: '', ein: '', phone: '', email: '', website: '', logo: '', active: true });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<EntityRow | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const d = await fetch('/api/entities').then((r) => r.json()) as { entities: EntityRow[] };
+      setRows(d.entities ?? []);
+    } catch { setRows([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { if (open) load(); }, [open, load]);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: '', ein: '', phone: '', email: '', website: '', logo: '', active: true });
+    setFormError(null); setShowModal(true);
+  };
+
+  const openEdit = (row: EntityRow) => {
+    setEditing(row);
+    setForm({ name: row.name, ein: row.ein ?? '', phone: row.phone ?? '', email: row.email ?? '', website: row.website ?? '', logo: row.logo ?? '', active: row.active });
+    setFormError(null); setShowModal(true);
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Logo must be under 2MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setForm((f) => ({ ...f, logo: ev.target?.result as string }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { setFormError('Entity name is required'); return; }
+    setSaving(true); setFormError(null);
+    try {
+      const url = editing ? `/api/entities/${editing.id}` : '/api/entities';
+      const method = editing ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const data = await r.json();
+      if (!r.ok) { setFormError((data as { error?: string }).error ?? 'Failed to save'); return; }
+      setShowModal(false); load();
+    } catch { setFormError('Network error'); }
+    finally { setSaving(false); }
+  };
+
+  const toggleActive = async (row: EntityRow) => {
+    await fetch(`/api/entities/${row.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !row.active }) });
+    load();
+  };
+
+  const handleDelete = async (row: EntityRow) => {
+    await fetch(`/api/entities/${row.id}`, { method: 'DELETE' });
+    setConfirmDel(null); load();
+  };
+
+  return (
+    <SettingsTile id="entities" icon="🏢" title="Entities" editMode={editMode}
+      description="Business entities that own clinic locations" open={open} onToggle={onToggle}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button className="btn btn-primary" style={{ fontSize: 12, padding: '4px 14px' }} onClick={openAdd}>+ Add Entity</button>
+      </div>
+      {loading ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>⏳ Loading…</div>
+      ) : rows.length === 0 ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>No entities yet. Click + Add Entity above.</div>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+              {['', 'Name', 'EIN', 'Phone', 'Email', 'Locs', 'Status', 'Actions'].map((h) => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={row.id} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#fafafa', cursor: 'pointer', transition: 'background 0.1s' }}
+                onClick={() => openEdit(row)}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}>
+                <td style={{ padding: '8px 8px 8px 12px', width: 44 }}><EntityAvatar name={row.name} logo={row.logo} /></td>
+                <td style={{ ...tdStyle, fontWeight: 600, color: '#111827' }}>{row.name}</td>
+                <td style={{ ...tdStyle, color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>{row.ein ?? '—'}</td>
+                <td style={tdStyle}>{row.phone ?? '—'}</td>
+                <td style={tdStyle}>{row.email ?? '—'}</td>
+                <td style={{ ...tdStyle, textAlign: 'center' }}>{row._count?.locations ?? 0}</td>
+                <td style={tdStyle}>
+                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: row.active ? '#dcfce7' : '#f3f4f6', color: row.active ? '#15803d' : '#6b7280' }}>
+                    {row.active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => openEdit(row)}>Edit</button>
+                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: row.active ? '#fff7ed' : '#f0fdf4', color: row.active ? '#c2410c' : '#15803d', border: `1px solid ${row.active ? '#fed7aa' : '#bbf7d0'}` }} onClick={() => toggleActive(row)}>
+                      {row.active ? 'Disable' : 'Enable'}
+                    </button>
+                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }} onClick={() => setConfirmDel(row)}>Del</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div style={{ background: '#fff', width: 520, maxHeight: '90vh', overflowY: 'auto', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{editing ? '✏️ Edit Entity' : '🏢 Add Entity'}</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                <EntityAvatar name={form.name || 'E'} logo={form.logo} size={64} />
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ cursor: 'pointer', color: '#0055a5', fontSize: 13, fontWeight: 600 }}>
+                    📷 Upload Logo
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoChange} />
+                  </label>
+                  {form.logo && <button type="button" onClick={() => setForm((f) => ({ ...f, logo: '' }))} style={{ marginLeft: 8, color: '#dc2626', fontSize: 12, background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>}
+                </div>
+              </div>
+              {formError && <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '8px 12px', borderRadius: 6, fontSize: 13, border: '1px solid #fecaca' }}>{formError}</div>}
+              <div><Label>Entity Name <span style={{ color: '#c62828' }}>*</span></Label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Acme Medical Group" /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><Label>EIN / Tax ID</Label><input className="form-input" value={form.ein} onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))} placeholder="XX-XXXXXXX" /></div>
+                <div><Label>Phone</Label><input className="form-input" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 000-0000" /></div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><Label>Email</Label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="admin@entity.com" /></div>
+                <div><Label>Website</Label><input className="form-input" value={form.website} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://…" /></div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Label>Active</Label>
+                <div onClick={() => setForm((f) => ({ ...f, active: !f.active }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.active ? '#2ec4b6' : '#d1d5db', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }}>
+                  <div style={{ position: 'absolute', top: 3, left: form.active ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+                </div>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{form.active ? 'Active' : 'Inactive'}</span>
+              </div>
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Entity'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDel && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200 }}>
+          <div style={{ background: '#fff', width: 380, borderRadius: 12, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700 }}>⚠️ Delete Entity?</h3>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#374151' }}>Delete <strong>{confirmDel.name}</strong>? This will soft-delete the entity.</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setConfirmDel(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ background: '#dc2626', borderColor: '#dc2626' }} onClick={() => handleDelete(confirmDel)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsTile>
+  );
+}
+
+// ─── TILE 12: Entity Locations ────────────────────────────────────────────────
+
+function EntityLocationsTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean }) {
+  const [rows, setRows] = useState<EntityLocRow[]>([]);
+  const [entities, setEntities] = useState<EntityRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filterEntityId, setFilterEntityId] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<EntityLocRow | null>(null);
+  const [form, setForm] = useState({ name: '', entityId: '', address: '', phone: '', active: true });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const loadEntities = useCallback(async () => {
+    try {
+      const d = await fetch('/api/entities').then((r) => r.json()) as { entities: EntityRow[] };
+      setEntities(d.entities?.filter((e) => e.active) ?? []);
+    } catch { setEntities([]); }
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const url = filterEntityId ? `/api/locations?entityId=${filterEntityId}` : '/api/locations';
+      const d = await fetch(url).then((r) => r.json()) as { locations: EntityLocRow[] };
+      setRows(d.locations ?? []);
+    } catch { setRows([]); }
+    finally { setLoading(false); }
+  }, [filterEntityId]);
+
+  useEffect(() => { if (open) { loadEntities(); } }, [open, loadEntities]);
+  useEffect(() => { if (open) load(); }, [open, load]);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: '', entityId: filterEntityId, address: '', phone: '', active: true });
+    setFormError(null); setShowModal(true);
+  };
+
+  const openEdit = (row: EntityLocRow) => {
+    setEditing(row);
+    setForm({ name: row.name, entityId: row.entityId ?? '', address: row.address ?? '', phone: row.phone ?? '', active: row.active });
+    setFormError(null); setShowModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { setFormError('Location name is required'); return; }
+    if (!form.entityId) { setFormError('Entity is required'); return; }
+    setSaving(true); setFormError(null);
+    try {
+      const url = editing ? `/api/locations/${editing.id}` : '/api/locations';
+      const method = editing ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const data = await r.json();
+      if (!r.ok) { setFormError((data as { error?: string }).error ?? 'Failed to save'); return; }
+      setShowModal(false); load();
+    } catch { setFormError('Network error'); }
+    finally { setSaving(false); }
+  };
+
+  const toggleActive = async (row: EntityLocRow) => {
+    await fetch(`/api/locations/${row.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !row.active }) });
+    load();
+  };
+
+  const handleDelete = async (row: EntityLocRow) => {
+    if (!confirm(`Delete location "${row.name}"?`)) return;
+    await fetch(`/api/locations/${row.id}`, { method: 'DELETE' }); load();
+  };
+
+  return (
+    <SettingsTile id="entity-locations" icon="🗺️" title="Entity Locations" editMode={editMode}
+      description="Clinic locations linked to business entities" open={open} onToggle={onToggle}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        <select className="form-input" style={{ flex: 1, minWidth: 160, fontSize: 12 }} value={filterEntityId} onChange={(e) => setFilterEntityId(e.target.value)}>
+          <option value="">All Entities</option>
+          {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+        </select>
+        <button className="btn btn-primary" style={{ fontSize: 12, padding: '4px 14px', flexShrink: 0 }} onClick={openAdd}>+ Add Location</button>
+      </div>
+      {loading ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>⏳ Loading…</div>
+      ) : rows.length === 0 ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>No locations found. Click + Add Location above.</div>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+              {['Name', 'Entity', 'Address', 'Phone', 'Status', 'Actions'].map((h) => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={row.id} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#fafafa', cursor: 'pointer', transition: 'background 0.1s' }}
+                onClick={() => openEdit(row)}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}>
+                <td style={{ ...tdStyle, fontWeight: 600, color: '#111827' }}>{row.name}</td>
+                <td style={{ ...tdStyle, color: '#6b7280' }}>{row.entity?.name ?? '—'}</td>
+                <td style={{ ...tdStyle, color: '#6b7280' }}>{row.address ?? '—'}</td>
+                <td style={tdStyle}>{row.phone ?? '—'}</td>
+                <td style={tdStyle}>
+                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: row.active ? '#dcfce7' : '#f3f4f6', color: row.active ? '#15803d' : '#6b7280' }}>
+                    {row.active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => openEdit(row)}>Edit</button>
+                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: row.active ? '#fff7ed' : '#f0fdf4', color: row.active ? '#c2410c' : '#15803d', border: `1px solid ${row.active ? '#fed7aa' : '#bbf7d0'}` }} onClick={() => toggleActive(row)}>
+                      {row.active ? 'Disable' : 'Enable'}
+                    </button>
+                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }} onClick={() => handleDelete(row)}>Del</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div style={{ background: '#fff', width: 480, maxHeight: '90vh', overflowY: 'auto', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{editing ? '✏️ Edit Location' : '📍 Add Location'}</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {formError && <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '8px 12px', borderRadius: 6, fontSize: 13, border: '1px solid #fecaca' }}>{formError}</div>}
+              <div><Label>Location Name <span style={{ color: '#c62828' }}>*</span></Label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Main Street Clinic" /></div>
+              <div>
+                <Label>Entity <span style={{ color: '#c62828' }}>*</span></Label>
+                <select className="form-input" value={form.entityId} onChange={(e) => setForm((f) => ({ ...f, entityId: e.target.value }))}>
+                  <option value="">Select entity…</option>
+                  {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+              </div>
+              <div><Label>Address</Label><input className="form-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="123 Main St, City, VA" /></div>
+              <div><Label>Phone</Label><input className="form-input" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 000-0000" /></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Label>Active</Label>
+                <div onClick={() => setForm((f) => ({ ...f, active: !f.active }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.active ? '#2ec4b6' : '#d1d5db', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }}>
+                  <div style={{ position: 'absolute', top: 3, left: form.active ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+                </div>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{form.active ? 'Active' : 'Inactive'}</span>
+              </div>
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Location'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </SettingsTile>
+  );
+}
+
+// ─── TILE 13: Users (super_admin only) ────────────────────────────────────────
+
+const ROLE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  super_admin:    { bg: '#f3e8ff', color: '#7c3aed', label: 'Super Admin' },
+  entity_admin:   { bg: '#dbeafe', color: '#1d4ed8', label: 'Entity Admin' },
+  location_staff: { bg: '#f3f4f6', color: '#6b7280', label: 'Location Staff' },
+};
+
+function userAvatarColor(name: string) {
+  const colors = ['#0d9488', '#2563eb', '#7c3aed', '#db2777', '#ea580c'];
+  return colors[name.charCodeAt(0) % colors.length];
+}
+
+function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean }) {
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [entities, setEntities] = useState<EntityRow[]>([]);
+  const [allLocations, setAllLocations] = useState<EntityLocRow[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; name: string; title: string; email: string | null; entityId: string | null }[]>([]);
+  const [nurses, setNurses] = useState<{ id: string; name: string; title: string; email: string | null; entityId: string | null }[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<UserRow | null>(null);
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'location_staff', entityId: '', locationIds: [] as string[], active: true });
+  const [importValue, setImportValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const d = await fetch('/api/users').then((r) => r.json()) as { users: UserRow[] };
+      setUsers(d.users ?? []);
+    } catch { setUsers([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  const loadRef = useCallback(async () => {
+    const [entD, locD, docD, nurD] = await Promise.all([
+      fetch('/api/entities').then((r) => r.json()).catch(() => ({ entities: [] })),
+      fetch('/api/locations?active=true').then((r) => r.json()).catch(() => ({ locations: [] })),
+      fetch('/api/doctors?active=true').then((r) => r.json()).catch(() => ({ doctors: [] })),
+      fetch('/api/nurses?active=true').then((r) => r.json()).catch(() => ({ nurses: [] })),
+    ]);
+    setEntities((entD as { entities: EntityRow[] }).entities ?? []);
+    setAllLocations((locD as { locations: EntityLocRow[] }).locations ?? []);
+    setDoctors((docD as { doctors: { id: string; name: string; title: string; email: string | null; entityId: string | null }[] }).doctors ?? []);
+    setNurses((nurD as { nurses: { id: string; name: string; title: string; email: string | null; entityId: string | null }[] }).nurses ?? []);
+  }, []);
+
+  useEffect(() => { if (open) { load(); loadRef(); } }, [open, load, loadRef]);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: '', email: '', password: '', role: 'location_staff', entityId: '', locationIds: [], active: true });
+    setImportValue(''); setFormError(null); setShowModal(true);
+  };
+
+  const openEdit = (user: UserRow) => {
+    setEditing(user);
+    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active });
+    setImportValue(''); setFormError(null); setShowModal(true);
+  };
+
+  const handleImport = (value: string) => {
+    setImportValue(value);
+    if (!value) return;
+    const [type, id] = value.split(':');
+    if (type === 'doctor') {
+      const doc = doctors.find((d) => d.id === id);
+      if (doc) setForm((f) => ({ ...f, name: doc.name, email: doc.email ?? f.email, entityId: doc.entityId ?? f.entityId }));
+    } else if (type === 'nurse') {
+      const nur = nurses.find((n) => n.id === id);
+      if (nur) setForm((f) => ({ ...f, name: nur.name, email: nur.email ?? f.email, entityId: nur.entityId ?? f.entityId }));
+    }
+  };
+
+  const filteredLocations = allLocations.filter((l) => !form.entityId || l.entityId === form.entityId || !l.entityId);
+
+  const toggleLocation = (locationId: string) => {
+    setForm((f) => ({
+      ...f,
+      locationIds: f.locationIds.includes(locationId) ? f.locationIds.filter((id) => id !== locationId) : [...f.locationIds, locationId],
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) { setFormError('Name is required'); return; }
+    if (!form.email.trim()) { setFormError('Email is required'); return; }
+    if (!editing && !form.password) { setFormError('Password is required for new users'); return; }
+    setSaving(true); setFormError(null);
+    try {
+      const payload = {
+        name: form.name, email: form.email,
+        ...(form.password ? { password: form.password } : {}),
+        role: form.role, entityId: form.entityId || null,
+        locationIds: form.locationIds, active: form.active,
+      };
+      const url = editing ? `/api/users/${editing.id}` : '/api/users';
+      const method = editing ? 'PUT' : 'POST';
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await r.json();
+      if (!r.ok) { setFormError((data as { error?: string }).error ?? 'Failed to save user'); return; }
+      setShowModal(false); load();
+    } catch { setFormError('Network error'); }
+    finally { setSaving(false); }
+  };
+
+  const handleToggle = async (user: UserRow) => {
+    await fetch(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !user.active }) });
+    load();
+  };
+
+  const handleDelete = async (user: UserRow) => {
+    if (!confirm(`Delete user ${user.name}? This cannot be undone.`)) return;
+    setDeleting(user.id);
+    try { await fetch(`/api/users/${user.id}`, { method: 'DELETE' }); load(); }
+    finally { setDeleting(null); }
+  };
+
+  return (
+    <SettingsTile id="users" icon="👤" title="Users" editMode={editMode}
+      description="System users, roles, and access (super admin only)" open={open} onToggle={onToggle}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button className="btn btn-primary" style={{ fontSize: 12, padding: '4px 14px' }} onClick={openAdd}>+ Add User</button>
+      </div>
+      {loading ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>⏳ Loading…</div>
+      ) : users.length === 0 ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>No users found.</div>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+              {['', 'Name', 'Email', 'Role', 'Entity', 'Status', 'Actions'].map((h) => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user, i) => {
+              const rs = ROLE_STYLES[user.role] ?? ROLE_STYLES.location_staff;
+              const color = userAvatarColor(user.name);
+              const initials = user.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+              return (
+                <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#fafafa', cursor: 'pointer', transition: 'background 0.1s' }}
+                  onClick={() => openEdit(user)}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}>
+                  <td style={{ padding: '8px 8px 8px 12px', width: 40 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700 }}>{initials}</div>
+                  </td>
+                  <td style={{ ...tdStyle, fontWeight: 600, color: '#111827' }}>{user.name}</td>
+                  <td style={{ ...tdStyle, color: '#6b7280' }}>{user.email}</td>
+                  <td style={tdStyle}><span style={{ background: rs.bg, color: rs.color, borderRadius: 9999, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{rs.label}</span></td>
+                  <td style={{ ...tdStyle, color: '#6b7280' }}>{user.entityName ?? '—'}</td>
+                  <td style={tdStyle}>
+                    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: user.active ? '#dcfce7' : '#f3f4f6', color: user.active ? '#15803d' : '#6b7280' }}>
+                      {user.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: user.active ? '#fff7ed' : '#f0fdf4', color: user.active ? '#c2410c' : '#15803d', border: `1px solid ${user.active ? '#fed7aa' : '#bbf7d0'}` }} onClick={() => handleToggle(user)}>
+                        {user.active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }} onClick={() => handleDelete(user)} disabled={deleting === user.id}>
+                        {deleting === user.id ? '…' : 'Del'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+          <div style={{ background: '#fff', width: 560, maxHeight: '90vh', overflowY: 'auto', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{editing ? '✏️ Edit User' : '👤 Add User'}</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {formError && <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '8px 12px', borderRadius: 6, fontSize: 13, border: '1px solid #fecaca' }}>{formError}</div>}
+              {!editing && (doctors.length > 0 || nurses.length > 0) && (
+                <div>
+                  <Label>Import from existing staff…</Label>
+                  <select className="form-input" value={importValue} onChange={(e) => handleImport(e.target.value)}>
+                    <option value="">— Select to pre-fill —</option>
+                    {doctors.length > 0 && <optgroup label="Doctors">{doctors.map((d) => <option key={`doctor:${d.id}`} value={`doctor:${d.id}`}>{d.title} {d.name}</option>)}</optgroup>}
+                    {nurses.length > 0 && <optgroup label="Nurses">{nurses.map((n) => <option key={`nurse:${n.id}`} value={`nurse:${n.id}`}>{n.title} {n.name}</option>)}</optgroup>}
+                  </select>
+                </div>
+              )}
+              <div><Label>Name <span style={{ color: '#c62828' }}>*</span></Label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" /></div>
+              <div><Label>Email <span style={{ color: '#c62828' }}>*</span></Label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@example.com" /></div>
+              <div>
+                <Label>{editing ? 'New Password (leave blank to keep current)' : 'Temporary Password'} {!editing && <span style={{ color: '#c62828' }}>*</span>}</Label>
+                <input type="password" className="form-input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder={editing ? 'Enter new password…' : 'Temporary password'} />
+              </div>
+              <div>
+                <Label>Role</Label>
+                <select className="form-input" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
+                  <option value="super_admin">Super Admin</option>
+                  <option value="entity_admin">Entity Admin</option>
+                  <option value="location_staff">Location Staff</option>
+                </select>
+              </div>
+              <div>
+                <Label>Entity</Label>
+                <select className="form-input" value={form.entityId} onChange={(e) => setForm((f) => ({ ...f, entityId: e.target.value, locationIds: [] }))}>
+                  <option value="">All — Super Admin</option>
+                  {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+              </div>
+              {filteredLocations.length > 0 && (
+                <div>
+                  <Label>Location Access</Label>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {filteredLocations.map((loc) => (
+                      <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
+                        <input type="checkbox" checked={form.locationIds.includes(loc.id)} onChange={() => toggleLocation(loc.id)} style={{ accentColor: '#0d9488' }} />
+                        {loc.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Label>Active</Label>
+                <div onClick={() => setForm((f) => ({ ...f, active: !f.active }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.active ? '#2ec4b6' : '#d1d5db', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }}>
+                  <div style={{ position: 'absolute', top: 3, left: form.active ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+                </div>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{form.active ? 'Active' : 'Inactive'}</span>
+              </div>
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Create User'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </SettingsTile>
   );
 }
