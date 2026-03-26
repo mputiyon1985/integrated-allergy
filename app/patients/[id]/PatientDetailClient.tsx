@@ -43,6 +43,7 @@ interface ApiDiagnosis { id: string; name: string; }
 
 interface AllergenMixItem {
   id: string;
+  allergenId: string;
   name: string;
   type: string;
   concentration: string;
@@ -159,6 +160,12 @@ export default function PatientDetailPage() {
   const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
   const [removing, setRemoving] = useState(false);
 
+  // ── Inline allergen grid state ───────────────────────────────────────────────
+  // gridChecked: allergenId → volume string (checked = in selection)
+  const [gridChecked, setGridChecked] = useState<Record<string, string>>({});
+  const [gridSaving, setGridSaving] = useState(false);
+  const [gridSaveMsg, setGridSaveMsg] = useState<string | null>(null);
+
   useEffect(() => {
     if (tabParam !== null) setActiveTab(parseInt(tabParam));
   }, [tabParam]);
@@ -180,7 +187,14 @@ export default function PatientDetailPage() {
         if (res.ok) {
           const data = await res.json();
           setPatient(data.patient);
-          setAllergens(data.allergens ?? []);
+          const loadedAllergens: AllergenMixItem[] = data.allergens ?? [];
+          setAllergens(loadedAllergens);
+          // Pre-check allergens already in mix
+          const initChecked: Record<string, string> = {};
+          loadedAllergens.forEach((a) => {
+            initChecked[a.allergenId] = String(a.volume);
+          });
+          setGridChecked(initChecked);
           setVials((data.vials ?? []).map((v: { id: string; vialNumber: number; color?: string; dilutionRatio: string; volume: number; expiry: string; status: string }) => ({
             ...v,
             color: isVialColor(v.color ?? '') ? (v.color as VialColor) : 'silver',
@@ -692,44 +706,222 @@ export default function PatientDetailPage() {
           </div>
         )}
 
-        {/* ── Tab 1: Allergen Mix ── */}
-        {activeTab === 1 && (
-          <div>
-            <div className="card" style={{ padding: 0, marginBottom: 12 }}>
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: 13, fontWeight: 700 }}>Allergen Mix ({allergens.length} components)</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => { setShowAllergenPicker(true); setAllergenError(null); }}>+ Add Allergen</button>
-              </div>
-              {allergenError && (
-                <div style={{ padding: '8px 16px', background: '#fef2f2', color: '#b91c1c', fontSize: 13, borderBottom: '1px solid #fecaca' }}>
-                  {allergenError}
+        {/* ── Tab 1: Allergen Mix (inline grid) ── */}
+        {activeTab === 1 && (() => {
+          // Group allergen library by type, sorted alphabetically
+          const typeOrder = ['Pollen', 'Mold', 'Dust', 'Animals', 'Insects', 'Foods', 'Other'];
+          const groups: Record<string, typeof allergenOptions> = {};
+          allergenOptions.forEach((a) => {
+            const key = a.type || 'Other';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(a);
+          });
+          Object.keys(groups).forEach((k) => { groups[k].sort((a, b) => a.name.localeCompare(b.name)); });
+          const sortedGroupKeys = [
+            ...typeOrder.filter((t) => groups[t]),
+            ...Object.keys(groups).filter((t) => !typeOrder.includes(t)).sort(),
+          ];
+
+          // Column layout: 3 columns, 2 groups each (desktop)
+          const col1 = sortedGroupKeys.slice(0, 2);
+          const col2 = sortedGroupKeys.slice(2, 4);
+          const col3 = sortedGroupKeys.slice(4);
+
+          const totalSelected = Object.keys(gridChecked).length;
+          const totalVolume = Object.values(gridChecked).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+
+          // Safety warnings
+          const checkedTypes = new Set(allergenOptions.filter((a) => gridChecked[a.id]).map((a) => (a.type || '').toLowerCase()));
+          const hasMoldPollenWarning = checkedTypes.has('mold') && checkedTypes.has('pollen');
+
+          const handleSaveMix = async () => {
+            setGridSaving(true);
+            setGridSaveMsg(null);
+            try {
+              // Build map of allergenId → mixId for existing allergens
+              const existingByAllergenId: Record<string, string> = {};
+              allergens.forEach((a) => { existingByAllergenId[a.allergenId] = a.id; });
+
+              const checkedIds = new Set(Object.keys(gridChecked));
+              const existingIds = new Set(Object.keys(existingByAllergenId));
+
+              // Items to add (checked but not in existing)
+              const toAdd = [...checkedIds].filter((id) => !existingIds.has(id));
+              // Items to update (checked and in existing, volume may differ)
+              const toUpdate = [...checkedIds].filter((id) => existingIds.has(id));
+              // Items to remove (existing but not checked)
+              const toRemove = [...existingIds].filter((id) => !checkedIds.has(id));
+
+              let anyError = false;
+
+              // Add new allergens
+              for (const allergenId of toAdd) {
+                const res = await fetch(`/api/patients/${patientDbId}/allergens`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ allergenId, volumeMl: parseFloat(gridChecked[allergenId]) || 1.0 }),
+                });
+                if (!res.ok) anyError = true;
+              }
+
+              // Update volumes for existing
+              for (const allergenId of toUpdate) {
+                const mixId = existingByAllergenId[allergenId];
+                const newVol = parseFloat(gridChecked[allergenId]) || 1.0;
+                const existing = allergens.find((a) => a.allergenId === allergenId);
+                if (existing && existing.volume !== newVol) {
+                  const res = await fetch(`/api/patients/${patientDbId}/allergens/${mixId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ volumeMl: newVol }),
+                  });
+                  if (!res.ok) anyError = true;
+                }
+              }
+
+              // Remove unchecked allergens
+              for (const allergenId of toRemove) {
+                const mixId = existingByAllergenId[allergenId];
+                const res = await fetch(`/api/patients/${patientDbId}/allergens/${mixId}`, { method: 'DELETE' });
+                if (!res.ok) anyError = true;
+              }
+
+              if (anyError) {
+                setGridSaveMsg('⚠ Some changes failed. Please try again.');
+              } else {
+                setGridSaveMsg('Saved ✓');
+                // Refresh allergens list
+                const r = await fetch(`/api/patients/${patientDbId}/allergens`);
+                if (r.ok) {
+                  const d = await r.json();
+                  const updated: AllergenMixItem[] = d.allergens ?? [];
+                  setAllergens(updated);
+                  const newChecked: Record<string, string> = {};
+                  updated.forEach((a) => { newChecked[a.allergenId] = String(a.volume); });
+                  setGridChecked(newChecked);
+                }
+                setTimeout(() => setGridSaveMsg(null), 3000);
+              }
+            } catch {
+              setGridSaveMsg('⚠ Network error. Please try again.');
+            } finally {
+              setGridSaving(false);
+            }
+          };
+
+          const renderGroup = (key: string) => {
+            const items = groups[key];
+            if (!items) return null;
+            return (
+              <div key={key} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e5e7eb' }}>
+                  {key}
                 </div>
-              )}
-              {allergens.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens in this mix yet.</div>
-              ) : (
-                <table className="clinical-table">
-                  <thead>
-                    <tr>
-                      <th>Allergen</th><th>Type</th><th>Concentration</th><th>Volume (mL)</th><th>Warnings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allergens.map((a) => (
-                      <tr key={a.id}>
-                        <td style={{ fontWeight: 500 }}>{a.name}</td>
-                        <td style={{ color: '#6b7280' }}>{a.type}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{a.concentration}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{typeof a.volume === 'number' ? a.volume.toFixed(2) : a.volume}</td>
-                        <td>{a.warning ? <span style={{ fontSize: 11, color: '#f57c00' }}>⚠ {a.warning}</span> : <span style={{ color: '#9ca3af', fontSize: 12 }}>—</span>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                {items.map((a) => {
+                  const isChecked = !!gridChecked[a.id];
+                  return (
+                    <div
+                      key={a.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 6,
+                        background: isChecked ? '#e8f9f7' : 'transparent',
+                        marginBottom: 2, cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                      onClick={() => {
+                        setGridChecked((prev) => {
+                          const next = { ...prev };
+                          if (next[a.id]) delete next[a.id];
+                          else next[a.id] = '1.0';
+                          return next;
+                        });
+                        setGridSaveMsg(null);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
+                      />
+                      <span style={{ flex: 1, fontSize: 12, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.3 }}>{a.name}</span>
+                      {isChecked && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="number"
+                            value={gridChecked[a.id]}
+                            min={0.05}
+                            step={0.05}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setGridChecked((prev) => ({ ...prev, [a.id]: val }));
+                              setGridSaveMsg(null);
+                            }}
+                            style={{ width: 52, padding: '2px 4px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 11, textAlign: 'right', background: '#f0fdfa' }}
+                          />
+                          <span style={{ fontSize: 10, color: '#6b7280' }}>mL</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          return (
+            <div>
+              {/* Top bar */}
+              <div className="card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, fontSize: 13, color: '#374151' }}>
+                  <span style={{ fontWeight: 700, color: '#0d9488' }}>{totalSelected}</span>
+                  <span style={{ color: '#6b7280' }}> allergens selected · </span>
+                  <span style={{ fontWeight: 700, color: '#0d9488' }}>{totalVolume.toFixed(1)}</span>
+                  <span style={{ color: '#6b7280' }}> mL total</span>
+                </div>
+                {hasMoldPollenWarning && (
+                  <div style={{ fontSize: 11, color: '#b45309', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    ⚠ Mold + Pollen cross-reactivity — verify with physician
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {gridSaveMsg && (
+                    <span style={{ fontSize: 12, color: gridSaveMsg.startsWith('⚠') ? '#b45309' : '#0d9488', fontWeight: 600 }}>
+                      {gridSaveMsg}
+                    </span>
+                  )}
+                  <button
+                    className="btn btn-teal btn-sm"
+                    onClick={handleSaveMix}
+                    disabled={gridSaving}
+                    style={{ fontWeight: 600, minWidth: 100 }}
+                  >
+                    {gridSaving ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                        Saving…
+                      </span>
+                    ) : '💾 Save Mix'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Allergen grid */}
+              <div className="card" style={{ padding: 16 }}>
+                {allergenOptions.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+                    <div>{col1.map(renderGroup)}</div>
+                    <div>{col2.map(renderGroup)}</div>
+                    <div>{col3.map(renderGroup)}</div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── Edit Patient Modal ── */}
         {showEditModal && (

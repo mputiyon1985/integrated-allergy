@@ -30,6 +30,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     });
     const allergens = mixes.map((m) => ({
       id: m.id,
+      allergenId: m.allergenId,
       name: m.allergen.name,
       type: m.allergen.type,
       concentration: m.allergen.stockConc ?? '—',
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json(
       {
         id: mix.id,
+        allergenId: mix.allergenId,
         name: mix.allergen.name,
         type: mix.allergen.type,
         concentration: mix.allergen.stockConc ?? '—',

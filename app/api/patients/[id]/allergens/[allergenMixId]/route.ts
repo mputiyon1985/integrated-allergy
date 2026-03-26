@@ -43,6 +43,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       id: updated.id,
+      allergenId: updated.allergenId,
       name: updated.allergen.name,
       type: updated.allergen.type,
       concentration: updated.allergen.stockConc ?? '—',
