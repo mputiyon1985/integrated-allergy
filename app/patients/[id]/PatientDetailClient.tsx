@@ -910,7 +910,7 @@ export default function PatientDetailPage() {
                 {allergenOptions.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
                 ) : (
-                  <div style={{ columns: '120px auto', columnGap: 12 }}>
+                  <div style={{ columns: '90px auto', columnGap: 12 }}>
                     {sortedGroupKeys.map(renderGroup)}
                   </div>
                 )}
