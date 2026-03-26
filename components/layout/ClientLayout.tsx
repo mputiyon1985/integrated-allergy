@@ -1,11 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import TopBarContext from './TopBarContext';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/login' || pathname?.startsWith('/login');
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
 
   return (
     <TopBarContext.Provider value={{ onMenuClick: () => setSidebarOpen(true) }}>
