@@ -206,8 +206,9 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Settings + Users — pinned at bottom above footer */}
+      {/* Setup — pinned at bottom above footer */}
       <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0', flexShrink: 0 }}>
+        <div style={{ padding: '6px 16px 2px', color: '#9ca3af', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Setup</div>
         <Link
           href="/settings"
           style={{
