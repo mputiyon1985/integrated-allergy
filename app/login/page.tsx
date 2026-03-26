@@ -40,7 +40,7 @@ export default function LoginPage() {
 
       // MFA disabled globally — direct login
       if (data.success) {
-        window.location.href = '/dashboard';
+        setTimeout(() => { window.location.href = '/dashboard'; }, 200);
         return;
       }
 
