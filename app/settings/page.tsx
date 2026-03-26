@@ -40,7 +40,7 @@ interface TitleRow { id: string; name: string; active: boolean; }
 
 type TileId =
   | 'branding' | 'notifications' | 'appearance' | 'clinic' | 'security' | 'export'
-  | 'locations' | 'diagnoses' | 'doctor-titles' | 'nurse-titles'
+  | 'diagnoses' | 'doctor-titles' | 'nurse-titles'
   | 'entities' | 'entity-locations' | 'users';
 
 // ─── Layout persistence ───────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ const LAYOUT_KEY = 'ia-settings-layout-v3';
 
 const ALL_TILE_IDS: TileId[] = [
   'branding', 'notifications', 'appearance', 'clinic', 'security', 'export',
-  'locations', 'diagnoses', 'doctor-titles', 'nurse-titles',
+  'diagnoses', 'doctor-titles', 'nurse-titles',
   'entities', 'entity-locations', 'users',
 ];
 
@@ -434,10 +434,7 @@ export default function SettingsPage() {
       id: 'export' as TileId,
       node: <ExportTile {...tileProps('export')} />,
     },
-    {
-      id: 'locations' as TileId,
-      node: <LocationsTile {...tileProps('locations')} />,
-    },
+
     {
       id: 'diagnoses' as TileId,
       node: <DiagnosesTile {...tileProps('diagnoses')} />,
@@ -955,7 +952,7 @@ function LocationsTile({ open, onToggle, editMode }: { open: boolean; onToggle: 
   };
 
   return (
-    <SettingsTile id="locations" icon="📍" title="Clinic Locations" editMode={editMode}
+    <SettingsTile id="entity-locations" icon="📍" title="Clinic Locations" editMode={editMode}
       description="Manage clinic locations used in patient forms" open={open} onToggle={onToggle}>
       <LookupTable
         rows={rows} loading={loading}
