@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TopBar from '@/components/layout/TopBar';
+import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 interface Patient {
   id: string;
@@ -108,8 +109,27 @@ export default function PatientsPage() {
         </div>
 
         {loading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Loading patients…
+          <div className="card" style={{ padding: 0 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="clinical-table">
+                <thead>
+                  <tr>
+                    <th>Patient ID</th>
+                    <th>Name</th>
+                    <th>DOB</th>
+                    <th>Physician</th>
+                    <th>Diagnosis</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <SkeletonRow key={i} cols={7} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

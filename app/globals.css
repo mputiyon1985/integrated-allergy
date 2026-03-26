@@ -409,6 +409,12 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Teal accent for edit buttons */
 .btn-teal {
   background: #2ec4b6;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import TopBar from '@/components/layout/TopBar';
+import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 const TITLES = ['RN', 'LPN', 'MA', 'CMA', 'NP', 'Other'];
 const LOCATIONS = [
@@ -230,9 +231,22 @@ export default function NursesPage() {
       <div className="page-content">
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: 32, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
-              Loading nurses…
-            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  {['', 'Name', 'Title', 'Clinic Location', 'Email', 'Phone', 'NPI', 'Status', 'Actions'].map((h) => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <SkeletonRow key={i} cols={9} />
+                ))}
+              </tbody>
+            </table>
           ) : displayed.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>👩‍⚕️</div>
