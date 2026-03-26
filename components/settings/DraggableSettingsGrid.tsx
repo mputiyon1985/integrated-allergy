@@ -39,8 +39,7 @@ export default function DraggableSettingsGrid({ tiles, layouts, editMode, onLayo
           rowHeight={48}
           isDraggable={editMode}
           isResizable={false}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          {...({ compactType: 'vertical' } as any)}
+          compactType={"vertical" as any}
           margin={[16, 16]}
           containerPadding={[0, 0]}
         >
