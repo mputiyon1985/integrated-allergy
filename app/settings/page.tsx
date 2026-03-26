@@ -898,6 +898,7 @@ function ExportTile({ open, onToggle, editMode }: { open: boolean; onToggle: () 
 
 // ─── TILE 7: Clinic Locations ─────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LocationsTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean; }) {
   const [rows, setRows]         = useState<LocRow[]>([]);
   const [loading, setLoading]   = useState(false);

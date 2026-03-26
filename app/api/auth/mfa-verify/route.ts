@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       secret: user.mfaSecret,
       encoding: 'base32',
       token: code,
-      window: 1,
+      window: 2,
     });
 
     if (!valid) {

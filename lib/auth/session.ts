@@ -7,7 +7,7 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 const SESSION_COOKIE = 'ia_session';
-const TEMP_COOKIE_PREFIX = 'ia_temp_';
+const _TEMP_COOKIE_PREFIX = 'ia_temp_';
 
 export interface UserContext {
   userId: string;

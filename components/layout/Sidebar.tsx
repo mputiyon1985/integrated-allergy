@@ -121,7 +121,7 @@ const NAV_ITEMS = [
 
 const DEFAULTS: SidebarSettings = {
   clinic_name: 'Integrated Allergy',
-  version_label: 'IMS v2.0 · © 2026',
+  version_label: 'IMS v2.1 · © 2026',
 };
 
 interface SidebarProps {
@@ -131,7 +131,7 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps = {}) {
   const pathname = usePathname();
   const [sidebarSettings, setSidebarSettings] = useState<SidebarSettings>(DEFAULTS);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [_userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/settings')

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getUserByEmail, getUserLocationIds } from '@/lib/auth/turso';
-import { signTempJWT, setSessionCookie, UserContext } from '@/lib/auth/session';
+import { signTempJWT } from '@/lib/auth/session';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
-    const locationIds = await getUserLocationIds(user.id);
+    await getUserLocationIds(user.id);
 
     // MFA already set up — require verification
     if (user.mfaEnabled && user.mfaSecret) {

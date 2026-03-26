@@ -146,7 +146,7 @@ export default function UsersPage() {
   }, []);
 
   const loadReferenceData = useCallback(async () => {
-    const [entR, locR, docR, nurR] = await Promise.all([
+    const [_entR, locR, docR, nurR] = await Promise.all([
       fetch('/api/settings').then((r) => r.json()).catch(() => ({})),
       fetch('/api/locations?active=true').then((r) => r.json()).catch(() => ({ locations: [] })),
       fetch('/api/doctors?active=true').then((r) => r.json()).catch(() => ({ doctors: [] })),

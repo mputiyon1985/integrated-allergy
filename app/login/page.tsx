@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+
 
 type Step = 'credentials' | 'mfa-verify' | 'mfa-setup';
 
@@ -260,7 +260,7 @@ export default function LoginPage() {
                 )}
 
                 <p className="text-xs text-gray-500 text-center mb-4">
-                  Can't scan? Enter this code manually:<br />
+                  Can&apos;t scan? Enter this code manually:<br />
                   <span className="font-mono text-gray-700 text-xs break-all">{mfaSecret}</span>
                 </p>
 
