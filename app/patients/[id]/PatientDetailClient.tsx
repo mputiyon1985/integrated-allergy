@@ -816,7 +816,7 @@ export default function PatientDetailPage() {
             const items = groups[key];
             if (!items) return null;
             return (
-              <div key={key} style={{ marginBottom: 16 }}>
+              <div key={key} style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e5e7eb' }}>
                   {key}
                 </div>
@@ -826,7 +826,7 @@ export default function PatientDetailPage() {
                     <div
                       key={a.id}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 6,
+                        display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', borderRadius: 4,
                         background: isChecked ? '#e8f9f7' : 'transparent',
                         marginBottom: 2, cursor: 'pointer',
                         transition: 'background 0.15s',
@@ -846,9 +846,9 @@ export default function PatientDetailPage() {
                         checked={isChecked}
                         onChange={() => {}}
                         onClick={(e) => e.stopPropagation()}
-                        style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
+                        style={{ width: 12, height: 12, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
                       />
-                      <span style={{ flex: 1, fontSize: 12, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.3 }}>{a.name}</span>
+                      <span style={{ flex: 1, fontSize: 11, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.2 }}>{a.name}</span>
                       {isChecked && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                           <input
@@ -861,7 +861,7 @@ export default function PatientDetailPage() {
                               setGridChecked((prev) => ({ ...prev, [a.id]: val }));
                               setGridSaveMsg(null);
                             }}
-                            style={{ width: 52, padding: '2px 4px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 11, textAlign: 'right', background: '#f0fdfa' }}
+                            style={{ width: 40, padding: '1px 3px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 10, textAlign: 'right', background: '#f0fdfa' }}
                           />
                           <span style={{ fontSize: 10, color: '#6b7280' }}>mL</span>
                         </div>
@@ -915,7 +915,7 @@ export default function PatientDetailPage() {
                 {allergenOptions.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
                     <div>{col1.map(renderGroup)}</div>
                     <div>{col2.map(renderGroup)}</div>
                     <div>{col3.map(renderGroup)}</div>
