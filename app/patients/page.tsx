@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TopBar from '@/components/layout/TopBar';
 
@@ -22,6 +23,7 @@ const statusClass: Record<string, string> = {
 };
 
 export default function PatientsPage() {
+  const router = useRouter();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filtered, setFiltered] = useState<Patient[]>([]);
   const [search, setSearch] = useState('');
@@ -142,8 +144,17 @@ export default function PatientsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((patient) => (
-                      <tr key={patient.id}>
+                    filtered.map((patient, i) => (
+                      <tr
+                        key={patient.id}
+                        onClick={() => router.push('/patients/' + patient.id)}
+                        style={{
+                          cursor: 'pointer',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}
+                      >
                         <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#6b7280' }}>
                           {patient.patientId}
                         </td>
@@ -161,6 +172,7 @@ export default function PatientsPage() {
                             <Link
                               href={`/patients/${patient.id}`}
                               className="btn btn-secondary btn-sm"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               View
                             </Link>

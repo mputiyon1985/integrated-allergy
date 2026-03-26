@@ -270,10 +270,15 @@ export default function DoctorsPage() {
                 {displayed.map((doc, i) => (
                   <tr
                     key={doc.id}
+                    onClick={() => openEdit(doc)}
                     style={{
                       borderBottom: '1px solid #f3f4f6',
                       background: i % 2 === 0 ? '#fff' : '#fafafa',
+                      cursor: 'pointer',
+                      transition: 'background 0.1s',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}
                   >
                     <td style={{ padding: '8px 8px 8px 14px', width: 48 }}>
                       <Avatar name={doc.name} photoUrl={doc.photoUrl} size={40} />
@@ -308,7 +313,7 @@ export default function DoctorsPage() {
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '3px 10px', fontSize: 12 }}
-                          onClick={() => openEdit(doc)}
+                          onClick={(e) => { e.stopPropagation(); openEdit(doc); }}
                         >
                           Edit
                         </button>
@@ -321,14 +326,14 @@ export default function DoctorsPage() {
                             color: doc.active ? '#c2410c' : '#15803d',
                             border: `1px solid ${doc.active ? '#fed7aa' : '#bbf7d0'}`,
                           }}
-                          onClick={() => toggleActive(doc)}
+                          onClick={(e) => { e.stopPropagation(); toggleActive(doc); }}
                         >
                           {doc.active ? 'Deactivate' : 'Reactivate'}
                         </button>
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '3px 10px', fontSize: 12, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}
-                          onClick={() => setConfirmDelete(doc)}
+                          onClick={(e) => { e.stopPropagation(); setConfirmDelete(doc); }}
                         >
                           Delete
                         </button>

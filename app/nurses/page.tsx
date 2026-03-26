@@ -266,10 +266,15 @@ export default function NursesPage() {
                 {displayed.map((nurse, i) => (
                   <tr
                     key={nurse.id}
+                    onClick={() => openEdit(nurse)}
                     style={{
                       borderBottom: '1px solid #f3f4f6',
                       background: i % 2 === 0 ? '#fff' : '#fafafa',
+                      cursor: 'pointer',
+                      transition: 'background 0.1s',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}
                   >
                     <td style={{ padding: '8px 8px 8px 14px', width: 48 }}>
                       <Avatar name={nurse.name} photoUrl={nurse.photoUrl} size={40} />
@@ -304,7 +309,7 @@ export default function NursesPage() {
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '3px 10px', fontSize: 12 }}
-                          onClick={() => openEdit(nurse)}
+                          onClick={(e) => { e.stopPropagation(); openEdit(nurse); }}
                         >
                           Edit
                         </button>
@@ -317,14 +322,14 @@ export default function NursesPage() {
                             color: nurse.active ? '#c2410c' : '#15803d',
                             border: `1px solid ${nurse.active ? '#fed7aa' : '#bbf7d0'}`,
                           }}
-                          onClick={() => toggleActive(nurse)}
+                          onClick={(e) => { e.stopPropagation(); toggleActive(nurse); }}
                         >
                           {nurse.active ? 'Deactivate' : 'Reactivate'}
                         </button>
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '3px 10px', fontSize: 12, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}
-                          onClick={() => setConfirmDelete(nurse)}
+                          onClick={(e) => { e.stopPropagation(); setConfirmDelete(nurse); }}
                         >
                           Delete
                         </button>
