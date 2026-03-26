@@ -37,8 +37,9 @@ export default function DraggableSettingsGrid({ tiles, layouts, editMode, onLayo
           breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
           cols={{ lg: 3, md: 2, sm: 2, xs: 1 }}
           rowHeight={48}
-          dragConfig={{ enabled: editMode }}
-          resizeConfig={{ enabled: false }}
+          isDraggable={editMode}
+          isResizable={false}
+          compactType={"vertical" as any}
           margin={[16, 16]}
           containerPadding={[0, 0]}
         >

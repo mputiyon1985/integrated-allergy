@@ -53,10 +53,10 @@ const TILE_IDS: TileId[] = [
 function makeDefaultLayouts() {
   // 3-col desktop grid: each tile is 1 wide, auto height (h=1 for collapsed, grid adjusts)
   const ids = TILE_IDS;
-  const lg  = ids.map((id, i) => ({ i: id, x: i % 3, y: Math.floor(i / 3), w: 1, h: 1 }));
-  const md  = ids.map((id, i) => ({ i: id, x: i % 2, y: Math.floor(i / 2), w: 1, h: 1 }));
-  const sm  = ids.map((id, i) => ({ i: id, x: 0,     y: i,                 w: 1, h: 1 }));
-  const xs  = ids.map((id, i) => ({ i: id, x: 0,     y: i,                 w: 1, h: 1 }));
+  const lg  = ids.map((id, i) => ({ i: id, x: i % 3, y: Math.floor(i / 3), w: 1, h: 2 }));
+  const md  = ids.map((id, i) => ({ i: id, x: i % 2, y: Math.floor(i / 2), w: 1, h: 2 }));
+  const sm  = ids.map((id, i) => ({ i: id, x: 0,     y: i * 2,             w: 1, h: 2 }));
+  const xs  = ids.map((id, i) => ({ i: id, x: 0,     y: i * 2,             w: 1, h: 2 }));
   return { lg, md, sm, xs };
 }
 
@@ -332,7 +332,22 @@ export default function SettingsPage() {
 
   const toggleTile = useCallback((id: TileId) => {
     if (editMode) return;
-    setOpenTile((prev) => (prev === id ? null : id));
+    setOpenTile((prev) => {
+      const newOpen = prev === id ? null : id;
+      // Update layouts: give open tile h=10, all others h=2
+      setLayouts((prevLayouts) => {
+        const updated: Record<string, unknown[]> = {};
+        for (const [bp, items] of Object.entries(prevLayouts)) {
+          updated[bp] = (items as Array<{i: string; x: number; y: number; w: number; h: number}>).map(item => ({
+            ...item,
+            h: newOpen === item.i ? 10 : 2,
+          }));
+        }
+        saveLayouts(updated);
+        return updated;
+      });
+      return newOpen;
+    });
   }, [editMode]);
 
   const handleLayoutChange = useCallback((_layout: unknown, allLayouts: Record<string, unknown[]>) => {
