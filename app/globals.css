@@ -138,7 +138,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
 
@@ -189,7 +189,7 @@ body {
 .btn-sm {
   padding: 4px 12px;
   font-size: 12px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 /* Card */
@@ -197,7 +197,7 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
@@ -220,7 +220,7 @@ body {
   background: #fff;
   color: var(--text);
   outline: none;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -428,5 +428,19 @@ body {
 
 /* Search input rounded */
 .search-input {
-  border-radius: 8px;
+  border-radius: 10px;
+}
+
+select.form-input {
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+textarea.form-input {
+  border-radius: 10px;
+  resize: vertical;
+}
+
+.card {
+  border-radius: 14px;
 }
