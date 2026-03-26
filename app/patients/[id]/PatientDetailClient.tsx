@@ -124,6 +124,9 @@ export default function PatientDetailPage() {
   const [allergenPickerSearch, setAllergenPickerSearch] = useState('');
   const [selectedAllergenId, setSelectedAllergenId] = useState('');
   const [selectedAllergenVolume, setSelectedAllergenVolume] = useState('1.0');
+  // Multi-select state: { allergenId -> volumeMl }
+  const [selectedAllergens, setSelectedAllergens] = useState<Record<string, string>>({});
+  const [addingAllergens, setAddingAllergens] = useState(false);
 
   useEffect(() => {
     if (tabParam !== null) setActiveTab(parseInt(tabParam));
@@ -479,42 +482,131 @@ export default function PatientDetailPage() {
         {/* ── Allergen Picker Modal ── */}
         {showAllergenPicker && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-            onClick={(e) => { if (e.target === e.currentTarget) setShowAllergenPicker(false); }}>
-            <div style={{ background: '#fff', width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowAllergenPicker(false); setSelectedAllergens({}); } }}>
+            <div style={{ background: '#fff', width: '100%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              {/* Header */}
               <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0055a5' }}>
-                <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Add Allergen to Mix</span>
-                <button onClick={() => setShowAllergenPicker(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>×</button>
+                <div>
+                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Add Allergens to Mix</span>
+                  {Object.keys(selectedAllergens).length > 0 && (
+                    <span style={{ marginLeft: 10, background: '#fff', color: '#0055a5', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }}>
+                      {Object.keys(selectedAllergens).length} selected
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => { setShowAllergenPicker(false); setSelectedAllergens({}); }} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>×</button>
               </div>
+
               {allergenError && (
                 <div style={{ padding: '8px 16px', background: '#fef2f2', color: '#b91c1c', fontSize: 13, borderBottom: '1px solid #fecaca' }}>{allergenError}</div>
               )}
+
+              {/* Search */}
               <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb' }}>
-                <input type="text" className="form-input" placeholder="Search allergens…" value={allergenPickerSearch} onChange={(e) => setAllergenPickerSearch(e.target.value)} autoFocus />
+                <input type="text" className="form-input" placeholder="Search by name or type (pollen, mold, dust, animal, insect, food)…" value={allergenPickerSearch} onChange={(e) => setAllergenPickerSearch(e.target.value)} autoFocus />
               </div>
+
+              {/* Allergen list with checkboxes + volume inputs */}
               <div style={{ overflowY: 'auto', flex: 1 }}>
-                {allergenOptions.filter((a) => !allergenPickerSearch || a.name.toLowerCase().includes(allergenPickerSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenPickerSearch.toLowerCase())).length === 0 ? (
-                  <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens in library. Add allergens in the Allergens section first.</div>
-                ) : (
-                  allergenOptions.filter((a) => !allergenPickerSearch || a.name.toLowerCase().includes(allergenPickerSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenPickerSearch.toLowerCase())).map((a) => {
-                    const selected = selectedAllergenId === a.id;
-                    return (
-                      <div key={a.id} onClick={() => setSelectedAllergenId(selected ? '' : a.id)} style={{ padding: '9px 16px', borderBottom: '1px solid #f0f2f5', cursor: 'pointer', background: selected ? '#e3f2fd' : '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{a.name}</div>
-                          <div style={{ fontSize: 11, color: '#6b7280' }}>{a.type} · {a.stockConcentration || 'No conc.'}</div>
-                        </div>
-                        {selected && <span style={{ color: '#1565c0', fontWeight: 700, fontSize: 12 }}>✓ Selected</span>}
+                {(() => {
+                  const filtered = allergenOptions.filter((a) => !allergenPickerSearch || a.name.toLowerCase().includes(allergenPickerSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenPickerSearch.toLowerCase()));
+                  if (filtered.length === 0) return (
+                    <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens found.</div>
+                  );
+                  // Group by type
+                  const groups: Record<string, typeof filtered> = {};
+                  filtered.forEach((a) => { if (!groups[a.type]) groups[a.type] = []; groups[a.type].push(a); });
+                  return Object.entries(groups).map(([type, items]) => (
+                    <div key={type}>
+                      <div style={{ padding: '6px 16px', background: '#f3f4f6', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e5e7eb' }}>
+                        {type}
                       </div>
-                    );
-                  })
-                )}
+                      {items.map((a) => {
+                        const isChecked = !!selectedAllergens[a.id];
+                        return (
+                          <div key={a.id} style={{ padding: '8px 16px', borderBottom: '1px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: 10, background: isChecked ? '#eff6ff' : '#fff' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                setSelectedAllergens((prev) => {
+                                  const next = { ...prev };
+                                  if (e.target.checked) next[a.id] = '1.0';
+                                  else delete next[a.id];
+                                  return next;
+                                });
+                              }}
+                              style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }}
+                            />
+                            <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => {
+                              setSelectedAllergens((prev) => {
+                                const next = { ...prev };
+                                if (next[a.id]) delete next[a.id];
+                                else next[a.id] = '1.0';
+                                return next;
+                              });
+                            }}>
+                              <div style={{ fontWeight: isChecked ? 700 : 400, fontSize: 13, color: '#111827' }}>{a.name}</div>
+                              <div style={{ fontSize: 11, color: '#6b7280' }}>{a.stockConcentration || ''}</div>
+                            </div>
+                            {isChecked && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                <input
+                                  type="number"
+                                  value={selectedAllergens[a.id]}
+                                  min={0.05}
+                                  step={0.05}
+                                  onChange={(e) => setSelectedAllergens((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{ width: 70, padding: '3px 6px', border: '1px solid #d1d5db', fontSize: 13, textAlign: 'right' }}
+                                />
+                                <span style={{ fontSize: 11, color: '#6b7280' }}>mL</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
               </div>
-              <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, alignItems: 'center' }}>
-                <label className="form-label" style={{ margin: 0, whiteSpace: 'nowrap' }}>Volume (mL):</label>
-                <input type="number" className="form-input" style={{ width: 90 }} min={0.1} step={0.1} value={selectedAllergenVolume} onChange={(e) => setSelectedAllergenVolume(e.target.value)} />
-                <button className="btn btn-secondary" onClick={() => setShowAllergenPicker(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleAddAllergen} disabled={addingAllergen || !selectedAllergenId}>
-                  {addingAllergen ? 'Adding…' : 'Add to Mix'}
+
+              {/* Footer */}
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center', background: '#f9fafb' }}>
+                <span style={{ fontSize: 12, color: '#6b7280', marginRight: 'auto' }}>
+                  {Object.keys(selectedAllergens).length === 0 ? 'Check allergens to select' : `${Object.keys(selectedAllergens).length} allergen(s) — set volumes above`}
+                </span>
+                <button className="btn btn-secondary" onClick={() => { setShowAllergenPicker(false); setSelectedAllergens({}); }}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={addingAllergens || Object.keys(selectedAllergens).length === 0}
+                  onClick={async () => {
+                    setAddingAllergens(true);
+                    setAllergenError(null);
+                    let anyError = false;
+                    for (const [allergenId, volume] of Object.entries(selectedAllergens)) {
+                      try {
+                        const res = await fetch(`/api/patients/${patient.id}/allergens`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ allergenId, volumeMl: parseFloat(volume) }),
+                        });
+                        if (!res.ok) { anyError = true; }
+                      } catch { anyError = true; }
+                    }
+                    if (anyError) {
+                      setAllergenError('Some allergens failed to add. Please try again.');
+                    } else {
+                      setShowAllergenPicker(false);
+                      setSelectedAllergens({});
+                      // Refresh patient mix
+                      const r = await fetch(`/api/patients/${patient.id}`);
+                      if (r.ok) { const d = await r.json(); setPatient(d.patient ?? patient); }
+                    }
+                    setAddingAllergens(false);
+                  }}
+                >
+                  {addingAllergens ? 'Adding…' : `Add ${Object.keys(selectedAllergens).length || ''} to Mix`}
                 </button>
               </div>
             </div>
