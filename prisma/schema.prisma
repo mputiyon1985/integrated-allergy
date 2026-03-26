@@ -11,10 +11,10 @@ datasource db {
 }
 
 model Patient {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
   dob             DateTime
-  patientId       String   @unique
+  patientId       String    @unique
   physician       String
   clinicLocation  String
   diagnosis       String
@@ -23,10 +23,11 @@ model Patient {
   email           String?
   insuranceId     String?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
   doctorId        String?
-  doctor          Doctor?  @relation(fields: [doctorId], references: [id])
+  doctor          Doctor?   @relation(fields: [doctorId], references: [id])
 
   allergenMixes   AllergenMix[]
   vials           Vial[]
@@ -36,18 +37,19 @@ model Patient {
 }
 
 model Doctor {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
-  title          String   @default("MD")
-  specialty      String   @default("Allergy & Immunology")
+  title          String    @default("MD")
+  specialty      String    @default("Allergy & Immunology")
   email          String?
   phone          String?
   clinicLocation String?
   npi            String?
   photoUrl       String?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   patients       Patient[]
 }
@@ -61,15 +63,17 @@ model Allergen {
   stockConc    String?   // e.g. "1:10"
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
 
   mixes        AllergenMix[]
 }
 
 model AllergenMix {
-  id         String  @id @default(cuid())
+  id         String    @id @default(cuid())
   patientId  String
   allergenId String
   volumeMl   Float
+  deletedAt  DateTime?
 
   patient    Patient  @relation(fields: [patientId], references: [id])
   allergen   Allergen @relation(fields: [allergenId], references: [id])
@@ -85,6 +89,7 @@ model Vial {
   colorCode       String    // silver, blue, yellow, red
   expiresAt       DateTime?
   createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
 
   patient         Patient          @relation(fields: [patientId], references: [id])
   doses           DosingSchedule[]
@@ -101,6 +106,7 @@ model DosingSchedule {
   notes          String?
   administered   Boolean   @default(false)
   administeredAt DateTime?
+  deletedAt      DateTime?
 
   patient        Patient @relation(fields: [patientId], references: [id])
   vial           Vial    @relation(fields: [vialId], references: [id])
@@ -119,31 +125,33 @@ model AuditLog {
 }
 
 model Appointment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   patientId   String
-  type        String   // shot, skin_test, evaluation, follow_up, other
+  type        String    // shot, skin_test, evaluation, follow_up, other
   title       String
   startTime   DateTime
   endTime     DateTime
   provider    String?
   notes       String?
-  status      String   @default("scheduled") // scheduled, confirmed, completed, cancelled, no_show
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String    @default("scheduled") // scheduled, confirmed, completed, cancelled, no_show
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   patient     Patient  @relation(fields: [patientId], references: [id])
 }
 
 model Nurse {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
-  title          String   @default("RN")
+  title          String    @default("RN")
   email          String?
   phone          String?
   clinicLocation String?
   npi            String?
   photoUrl       String?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 }

@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
     const appt = await prisma.appointment.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: { patient: { select: { id: true, name: true, patientId: true } } },
     });
     if (!appt) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -81,18 +81,22 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
-    const appt = await prisma.appointment.findUnique({ where: { id } });
+    const appt = await prisma.appointment.findUnique({ where: { id, deletedAt: null } });
     if (!appt) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    await prisma.appointment.delete({ where: { id } });
+    // Soft delete — set deletedAt timestamp (data always retained)
+    await prisma.appointment.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
 
     await prisma.auditLog.create({
       data: {
         patientId: appt.patientId,
-        action:    'Appointment Deleted',
+        action:    'Soft Delete',
         entity:    'Appointment',
         entityId:  id,
-        details:   `Deleted: ${appt.title}`,
+        details:   `Appointment soft-deleted (data retained): ${appt.title}`,
       },
     });
 

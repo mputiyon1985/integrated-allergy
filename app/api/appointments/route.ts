@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
+        deletedAt: null,
         ...(patientId && { patientId }),
         ...(type      && { type }),
         ...(from || to

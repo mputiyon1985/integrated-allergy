@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     // --- Verify patient exists ---
     let patient;
     try {
-      patient = await prisma.patient.findUnique({ where: { id: body.patientId } });
+      patient = await prisma.patient.findUnique({ where: { id: body.patientId, deletedAt: null } });
     } catch {
       patient = null;
     }
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
         if (!resolvedId) {
           // Try to find existing allergen by name
           const existing = await prisma.allergen.findFirst({
-            where: { name: a.name },
+            where: { name: a.name, deletedAt: null },
           });
 
           if (existing) {

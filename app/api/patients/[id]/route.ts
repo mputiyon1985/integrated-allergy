@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
   try {
     const patient = await prisma.patient.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: { doctor: true },
     });
     if (!patient) {
@@ -32,15 +32,15 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     const [allergenMixes, vials, dosing, auditLogs] = await Promise.all([
       prisma.allergenMix.findMany({
-        where: { patientId: id },
+        where: { patientId: id, deletedAt: null },
         include: { allergen: true },
       }),
       prisma.vial.findMany({
-        where: { patientId: id },
+        where: { patientId: id, deletedAt: null },
         orderBy: { vialNumber: 'asc' },
       }),
       prisma.dosingSchedule.findMany({
-        where: { patientId: id },
+        where: { patientId: id, deletedAt: null },
         orderBy: [{ weekNumber: 'asc' }],
         include: { vial: true },
       }),
@@ -198,6 +198,37 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   // Delegate to PUT for consistency
   return PUT(req, { params });
+}
+
+export async function DELETE(_req: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  try {
+    const existing = await prisma.patient.findUnique({ where: { id, deletedAt: null } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
+    }
+
+    // Soft delete — set deletedAt timestamp (data always retained)
+    await prisma.patient.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        patientId: id,
+        action: 'Soft Delete',
+        entity: 'Patient',
+        entityId: id,
+        details: `Patient soft-deleted (data retained): ${existing.name}`,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /api/patients/[id] error:', err);
+    return NextResponse.json({ error: 'Failed to soft-delete patient' }, { status: 500 });
+  }
 }
 
 function capitalize(s: string): string {

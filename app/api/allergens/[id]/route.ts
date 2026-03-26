@@ -38,7 +38,7 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const allergen = await prisma.allergen.findUnique({ where: { id } });
+    const allergen = await prisma.allergen.findUnique({ where: { id, deletedAt: null } });
     if (!allergen) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ allergen: shapeAllergen(allergen) });
   } catch (err) {
@@ -84,7 +84,24 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    await prisma.allergen.delete({ where: { id } });
+    const existing = await prisma.allergen.findUnique({ where: { id, deletedAt: null } });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // Soft delete — set deletedAt timestamp (data always retained)
+    await prisma.allergen.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: 'Soft Delete',
+        entity: 'Allergen',
+        entityId: id,
+        details: `Allergen soft-deleted (data retained): ${existing.name}`,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/allergens/[id] error:', err);

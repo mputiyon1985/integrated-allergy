@@ -27,11 +27,11 @@ export const revalidate = 0;
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const patient = await prisma.patient.findUnique({ where: { id } })
+    const patient = await prisma.patient.findUnique({ where: { id, deletedAt: null } })
     if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
     const schedule = await prisma.dosingSchedule.findMany({
-      where: { patientId: id },
+      where: { patientId: id, deletedAt: null },
       orderBy: [{ weekNumber: 'asc' }, { vialId: 'asc' }],
       include: { vial: true },
     })
@@ -44,14 +44,14 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const patient = await prisma.patient.findUnique({ where: { id } })
+    const patient = await prisma.patient.findUnique({ where: { id, deletedAt: null } })
     if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const startWeek = typeof body.startWeek === 'number' ? body.startWeek : 1
 
     const vials = await prisma.vial.findMany({
-      where: { patientId: id },
+      where: { patientId: id, deletedAt: null },
       orderBy: { vialNumber: 'asc' },
     })
 

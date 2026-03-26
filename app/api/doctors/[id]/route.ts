@@ -23,7 +23,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const doctor = await prisma.doctor.findUnique({ where: { id } });
+    const doctor = await prisma.doctor.findUnique({ where: { id, deletedAt: null } });
     if (!doctor) {
       return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
     }
@@ -52,7 +52,7 @@ export async function PUT(
       active?: boolean;
     };
 
-    const existing = await prisma.doctor.findUnique({ where: { id } });
+    const existing = await prisma.doctor.findUnique({ where: { id, deletedAt: null } });
     if (!existing) {
       return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
     }
@@ -95,23 +95,23 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const existing = await prisma.doctor.findUnique({ where: { id } });
+    const existing = await prisma.doctor.findUnique({ where: { id, deletedAt: null } });
     if (!existing) {
       return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
     }
 
-    // Soft delete — set active = false
+    // Soft delete — set deletedAt timestamp and deactivate (data always retained)
     const doctor = await prisma.doctor.update({
       where: { id },
-      data: { active: false },
+      data: { deletedAt: new Date(), active: false },
     });
 
     await prisma.auditLog.create({
       data: {
-        action: 'Doctor Deactivated',
+        action: 'Soft Delete',
         entity: 'Doctor',
         entityId: id,
-        details: `Doctor deactivated: ${doctor.title} ${doctor.name}`,
+        details: `Doctor soft-deleted (data retained): ${doctor.title} ${doctor.name}`,
       },
     });
 

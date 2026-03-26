@@ -22,6 +22,7 @@ export const revalidate = 0;
 export async function GET() {
   try {
     const patients = await prisma.patient.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     // Normalize to the shape the UI expects

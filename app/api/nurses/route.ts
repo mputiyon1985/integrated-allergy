@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const activeOnly = searchParams.get('active') === 'true';
 
     const nurses = await prisma.nurse.findMany({
-      where: activeOnly ? { active: true } : undefined,
+      where: activeOnly ? { active: true, deletedAt: null } : { deletedAt: null },
       orderBy: { name: 'asc' },
     });
 

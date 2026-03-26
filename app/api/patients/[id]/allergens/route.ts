@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
     const mixes = await prisma.allergenMix.findMany({
-      where: { patientId: id },
+      where: { patientId: id, deletedAt: null },
       include: { allergen: true },
     });
     const allergens = mixes.map((m) => ({
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // Verify patient exists
-    const patient = await prisma.patient.findUnique({ where: { id } });
+    const patient = await prisma.patient.findUnique({ where: { id, deletedAt: null } });
     if (!patient) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
     }

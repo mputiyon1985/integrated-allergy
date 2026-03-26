@@ -44,18 +44,19 @@ export async function GET() {
       activeNurses,
       recentLogs,
     ] = await Promise.all([
-      prisma.patient.count(),
+      prisma.patient.count({ where: { deletedAt: null } }),
 
       prisma.vial.count({
-        where: { expiresAt: { gte: now } },
+        where: { deletedAt: null, expiresAt: { gte: now } },
       }),
 
       prisma.vial.count({
-        where: { expiresAt: { gte: now, lte: in30Days } },
+        where: { deletedAt: null, expiresAt: { gte: now, lte: in30Days } },
       }),
 
       prisma.dosingSchedule.count({
         where: {
+          deletedAt: null,
           administered: true,
           administeredAt: { gte: weekStart, lte: now },
         },
@@ -64,6 +65,7 @@ export async function GET() {
       // Shots today: appointments of type 'shot' starting today
       prisma.appointment.count({
         where: {
+          deletedAt: null,
           type: 'shot',
           startTime: { gte: todayStart, lte: todayEnd },
         },
@@ -72,6 +74,7 @@ export async function GET() {
       // Skin tests today
       prisma.appointment.count({
         where: {
+          deletedAt: null,
           type: 'skin_test',
           startTime: { gte: todayStart, lte: todayEnd },
         },
@@ -80,16 +83,17 @@ export async function GET() {
       // Evals today
       prisma.appointment.count({
         where: {
+          deletedAt: null,
           type: 'evaluation',
           startTime: { gte: todayStart, lte: todayEnd },
         },
       }),
 
-      // Active doctors
-      prisma.doctor.count({ where: { active: true } }),
+      // Active doctors (not soft-deleted)
+      prisma.doctor.count({ where: { active: true, deletedAt: null } }),
 
-      // Active nurses
-      prisma.nurse.count({ where: { active: true } }),
+      // Active nurses (not soft-deleted)
+      prisma.nurse.count({ where: { active: true, deletedAt: null } }),
 
       prisma.auditLog.findMany({
         orderBy: { createdAt: 'desc' },

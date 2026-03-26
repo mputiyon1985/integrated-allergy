@@ -23,6 +23,7 @@ export const revalidate = 0;
 export async function GET() {
   try {
     const allergens = await prisma.allergen.findMany({
+      where: { deletedAt: null },
       orderBy: { name: 'asc' },
     });
     const shaped = allergens.map((a) => ({
