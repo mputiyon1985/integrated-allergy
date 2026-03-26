@@ -811,7 +811,7 @@ export default function PatientDetailPage() {
             const items = groups[key];
             if (!items) return null;
             return (
-              <div key={key} style={{ marginBottom: 8 }}>
+              <div key={key} style={{ marginBottom: 6, breakInside: "avoid" as const }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e5e7eb' }}>
                   {key}
                 </div>
@@ -821,7 +821,7 @@ export default function PatientDetailPage() {
                     <div
                       key={a.id}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', borderRadius: 4,
+                        display: 'flex', alignItems: 'center', gap: 3, padding: '1px 2px', borderRadius: 3,
                         background: isChecked ? '#e8f9f7' : 'transparent',
                         marginBottom: 2, cursor: 'pointer',
                         transition: 'background 0.15s',
@@ -843,7 +843,7 @@ export default function PatientDetailPage() {
                         onClick={(e) => e.stopPropagation()}
                         style={{ width: 12, height: 12, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
                       />
-                      <span style={{ flex: 1, fontSize: 11, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.2 }}>{a.name}</span>
+                      <span style={{ flex: 1, fontSize: 10, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
                       {isChecked && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                           <input
@@ -910,7 +910,7 @@ export default function PatientDetailPage() {
                 {allergenOptions.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
                 ) : (
-                  <div style={{ columns: '90px auto', columnGap: 12 }}>
+                  <div style={{ columns: '80px auto', columnGap: 6 }}>
                     {sortedGroupKeys.map(renderGroup)}
                   </div>
                 )}
