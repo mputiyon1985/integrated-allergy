@@ -119,7 +119,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff' }}>
       {/* Clinic branding */}
-      <div style={{ padding: '10px 0 10px 0', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ padding: '10px 0 10px 8px', borderBottom: '1px solid #e5e7eb' }}>
         <img
           src="/integrated-allergy-logo.jpg"
           alt="Integrated Allergy"
