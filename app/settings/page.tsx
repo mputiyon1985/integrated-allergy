@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import TopBar from '@/components/layout/TopBar';
 
@@ -151,8 +151,7 @@ function SettingsTile({
       background: '#fff', borderRadius: 14,
       border: editMode ? '2px dashed #f59e0b' : '1px solid #e5e7eb',
       boxShadow: open ? '0 4px 24px rgba(0,0,0,0.10)' : '0 2px 8px rgba(0,0,0,0.06)',
-      overflow: 'hidden', transition: 'box-shadow 0.2s, border 0.2s',
-      minHeight: '100%', display: 'flex', flexDirection: 'column',
+      transition: 'box-shadow 0.2s, border 0.2s',
     }}>
       {/* Card header */}
       <div
@@ -196,12 +195,16 @@ function SettingsTile({
         )}
       </div>
 
-      {/* Expanded panel */}
-      {open && !editMode && (
-        <div style={{ padding: '20px 24px', flex: 1 }}>
+      {/* Expanded panel — CSS transition, no grid height conflicts */}
+      <div style={{
+        maxHeight: (open && !editMode) ? '2000px' : '0',
+        overflow: 'hidden',
+        transition: 'max-height 0.3s ease',
+      }}>
+        <div style={{ padding: '20px 24px' }}>
           {children}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -332,22 +335,7 @@ export default function SettingsPage() {
 
   const toggleTile = useCallback((id: TileId) => {
     if (editMode) return;
-    setOpenTile((prev) => {
-      const newOpen = prev === id ? null : id;
-      // Update layouts: give open tile h=10, all others h=2
-      setLayouts((prevLayouts) => {
-        const updated: Record<string, unknown[]> = {};
-        for (const [bp, items] of Object.entries(prevLayouts)) {
-          updated[bp] = (items as Array<{i: string; x: number; y: number; w: number; h: number}>).map(item => ({
-            ...item,
-            h: newOpen === item.i ? 10 : 2,
-          }));
-        }
-        saveLayouts(updated);
-        return updated;
-      });
-      return newOpen;
-    });
+    setOpenTile((prev) => prev === id ? null : id);
   }, [editMode]);
 
   const handleLayoutChange = useCallback((_layout: unknown, allLayouts: Record<string, unknown[]>) => {
@@ -419,6 +407,15 @@ export default function SettingsPage() {
     },
   ];
 
+  // Derive display order from saved grid layout (lg breakpoint x/y positions)
+  const orderedTiles = useMemo(() => {
+    const lgLayout = (layouts as Record<string, Array<{i: string; x: number; y: number}>>).lg;
+    if (!lgLayout) return tiles;
+    const sorted = [...lgLayout].sort((a, b) => a.y !== b.y ? a.y - b.y : a.x - b.x);
+    const orderedIds = sorted.map(l => l.i);
+    return orderedIds.map(id => tiles.find(t => t.id === id)).filter(Boolean) as typeof tiles;
+  }, [layouts, tiles]);
+
   return (
     <>
       <TopBar
@@ -456,12 +453,20 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <DraggableSettingsGrid
-          tiles={tiles}
-          layouts={layouts}
-          editMode={editMode}
-          onLayoutChange={handleLayoutChange}
-        />
+        {editMode ? (
+          <DraggableSettingsGrid
+            tiles={tiles}
+            layouts={layouts}
+            editMode={true}
+            onLayoutChange={handleLayoutChange}
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {orderedTiles.map(tile => (
+              <div key={tile.id}>{tile.node}</div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
