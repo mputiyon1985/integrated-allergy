@@ -121,14 +121,9 @@ export default function Sidebar() {
       {/* Clinic branding */}
       <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid #2d3f5e' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: '#0055a5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-          </div>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 13, lineHeight: 1.2 }}>Integrated Allergy</div>
-            <div style={{ color: '#8a9bbf', fontSize: 11, marginTop: 2 }}>IMS v1.0</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <img src="/integrated-allergy-logo.png" alt="Integrated Allergy" style={{ height: 40, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+            <div style={{ color: '#8a9bbf', fontSize: 10, marginTop: 3 }}>IMS v2.0 · © 2026</div>
           </div>
         </div>
       </div>
