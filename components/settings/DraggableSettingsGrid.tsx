@@ -36,14 +36,14 @@ export default function DraggableSettingsGrid({ tiles, layouts, editMode, onLayo
           onLayoutChange={handleLayoutChange as any}
           breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
           cols={{ lg: 3, md: 2, sm: 2, xs: 1 }}
-          rowHeight={72}
+          rowHeight={48}
           dragConfig={{ enabled: editMode }}
           resizeConfig={{ enabled: false }}
           margin={[16, 16]}
           containerPadding={[0, 0]}
         >
           {tiles.map((tile) => (
-            <div key={tile.id} style={{ height: '100%' }}>
+            <div key={tile.id} style={{ height: '100%', overflow: 'visible' }}>
               {tile.node}
             </div>
           ))}

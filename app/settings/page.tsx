@@ -152,7 +152,7 @@ function SettingsTile({
       border: editMode ? '2px dashed #f59e0b' : '1px solid #e5e7eb',
       boxShadow: open ? '0 4px 24px rgba(0,0,0,0.10)' : '0 2px 8px rgba(0,0,0,0.06)',
       overflow: 'hidden', transition: 'box-shadow 0.2s, border 0.2s',
-      height: '100%', display: 'flex', flexDirection: 'column',
+      minHeight: '100%', display: 'flex', flexDirection: 'column',
     }}>
       {/* Card header */}
       <div
