@@ -38,6 +38,12 @@ export default function LoginPage() {
         return;
       }
 
+      // MFA disabled globally — direct login
+      if (data.success) {
+        router.push('/dashboard');
+        return;
+      }
+
       setTempToken(data.tempToken);
 
       if (data.requiresMfa) {
