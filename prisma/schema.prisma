@@ -10,24 +10,70 @@ datasource db {
   provider = "sqlite"
 }
 
+model BusinessEntity {
+  id           String           @id @default(cuid())
+  name         String
+  ein          String?
+  phone        String?
+  email        String?
+  website      String?
+  logo         String?
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  deletedAt    DateTime?
+  users        AppUser[]
+  locations    ClinicLocation[]
+  patients     Patient[]
+  doctors      Doctor[]
+  nurses       Nurse[]
+  appointments Appointment[]
+}
+
+model AppUser {
+  id             String               @id @default(cuid())
+  email          String               @unique
+  passwordHash   String
+  name           String
+  role           String               @default("location_staff")
+  entityId       String?
+  entity         BusinessEntity?      @relation(fields: [entityId], references: [id])
+  mfaSecret      String?
+  mfaEnabled     Boolean              @default(false)
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  deletedAt      DateTime?
+  locationAccess UserLocationAccess[]
+}
+
+model UserLocationAccess {
+  id         String         @id @default(cuid())
+  userId     String
+  locationId String
+  user       AppUser        @relation(fields: [userId], references: [id])
+  location   ClinicLocation @relation(fields: [locationId], references: [id])
+  createdAt  DateTime       @default(now())
+}
+
 model Patient {
-  id              String    @id @default(cuid())
-  name            String
-  dob             DateTime
-  patientId       String    @unique
-  physician       String
-  clinicLocation  String
-  diagnosis       String
-  startDate       DateTime
-  phone           String?
-  email           String?
-  insuranceId     String?
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
-  doctorId        String?
-  doctor          Doctor?   @relation(fields: [doctorId], references: [id])
+  id             String    @id @default(cuid())
+  name           String
+  dob            DateTime
+  patientId      String    @unique
+  physician      String
+  clinicLocation String
+  diagnosis      String
+  startDate      DateTime
+  phone          String?
+  email          String?
+  insuranceId    String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  doctorId       String?
+  doctor         Doctor?   @relation(fields: [doctorId], references: [id])
+  entityId       String?
+  entity         BusinessEntity? @relation(fields: [entityId], references: [id])
 
   allergenMixes   AllergenMix[]
   vials           Vial[]
@@ -37,35 +83,37 @@ model Patient {
 }
 
 model Doctor {
-  id             String    @id @default(cuid())
+  id             String          @id @default(cuid())
   name           String
-  title          String    @default("MD")
-  specialty      String    @default("Allergy & Immunology")
+  title          String          @default("MD")
+  specialty      String          @default("Allergy & Immunology")
   email          String?
   phone          String?
   clinicLocation String?
   npi            String?
   photoUrl       String?
-  active         Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
+  entityId       String?
+  entity         BusinessEntity? @relation(fields: [entityId], references: [id])
 
-  patients       Patient[]
+  patients Patient[]
 }
 
 model Allergen {
   id           String    @id @default(cuid())
   name         String
-  type         String    // mold, pollen, dust, animal, food, insect
+  type         String // mold, pollen, dust, animal, food, insect
   manufacturer String?
   lotNumber    String?
-  stockConc    String?   // e.g. "1:10"
+  stockConc    String? // e.g. "1:10"
   expiresAt    DateTime?
   createdAt    DateTime  @default(now())
   deletedAt    DateTime?
 
-  mixes        AllergenMix[]
+  mixes AllergenMix[]
 }
 
 model AllergenMix {
@@ -75,24 +123,24 @@ model AllergenMix {
   volumeMl   Float
   deletedAt  DateTime?
 
-  patient    Patient  @relation(fields: [patientId], references: [id])
-  allergen   Allergen @relation(fields: [allergenId], references: [id])
+  patient  Patient  @relation(fields: [patientId], references: [id])
+  allergen Allergen @relation(fields: [allergenId], references: [id])
 }
 
 model Vial {
   id              String    @id @default(cuid())
   patientId       String
-  vialNumber      Int       // 1-4
-  dilutionRatio   String    // e.g. "1:10000"
+  vialNumber      Int // 1-4
+  dilutionRatio   String // e.g. "1:10000"
   totalVolumeMl   Float
   glycerinPercent Float
-  colorCode       String    // silver, blue, yellow, red
+  colorCode       String // silver, blue, yellow, red
   expiresAt       DateTime?
   createdAt       DateTime  @default(now())
   deletedAt       DateTime?
 
-  patient         Patient          @relation(fields: [patientId], references: [id])
-  doses           DosingSchedule[]
+  patient Patient          @relation(fields: [patientId], references: [id])
+  doses   DosingSchedule[]
 }
 
 model DosingSchedule {
@@ -101,15 +149,15 @@ model DosingSchedule {
   vialId         String
   weekNumber     Int
   doseMl         Float
-  phase          String    // buildup, maintenance
+  phase          String // buildup, maintenance
   reaction       String?
   notes          String?
   administered   Boolean   @default(false)
   administeredAt DateTime?
   deletedAt      DateTime?
 
-  patient        Patient @relation(fields: [patientId], references: [id])
-  vial           Vial    @relation(fields: [vialId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+  vial    Vial    @relation(fields: [vialId], references: [id])
 }
 
 model AuditLog {
@@ -121,49 +169,56 @@ model AuditLog {
   details   String?
   createdAt DateTime @default(now())
 
-  patient   Patient? @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
 }
 
 model Appointment {
-  id          String    @id @default(cuid())
-  patientId   String
-  type        String    // shot, skin_test, evaluation, follow_up, other
-  title       String
-  startTime   DateTime
-  endTime     DateTime
-  provider    String?
-  notes       String?
-  status      String    @default("scheduled") // scheduled, confirmed, completed, cancelled, no_show
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id        String    @id @default(cuid())
+  patientId String
+  type      String // shot, skin_test, evaluation, follow_up, other
+  title     String
+  startTime DateTime
+  endTime   DateTime
+  provider  String?
+  notes     String?
+  status    String    @default("scheduled") // scheduled, confirmed, completed, cancelled, no_show
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  entityId  String?
+  entity    BusinessEntity? @relation(fields: [entityId], references: [id])
 
-  patient     Patient  @relation(fields: [patientId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 }
 
 model Nurse {
-  id             String    @id @default(cuid())
+  id             String          @id @default(cuid())
   name           String
-  title          String    @default("RN")
+  title          String          @default("RN")
   email          String?
   phone          String?
   clinicLocation String?
   npi            String?
   photoUrl       String?
-  active         Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
+  entityId       String?
+  entity         BusinessEntity? @relation(fields: [entityId], references: [id])
 }
 
 model ClinicLocation {
-  id        String    @id @default(cuid())
-  name      String
-  address   String?
-  active    Boolean   @default(true)
-  sortOrder Int       @default(0)
-  createdAt DateTime  @default(now())
-  deletedAt DateTime?
+  id             String               @id @default(cuid())
+  name           String
+  address        String?
+  active         Boolean              @default(true)
+  sortOrder      Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  deletedAt      DateTime?
+  entityId       String?
+  entity         BusinessEntity?      @relation(fields: [entityId], references: [id])
+  userAccess     UserLocationAccess[]
 }
 
 model DiagnosisOption {
