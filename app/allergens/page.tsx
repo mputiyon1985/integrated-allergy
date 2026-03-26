@@ -224,7 +224,20 @@ export default function AllergensPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading allergens…</div>
+          <div className="card" style={{ padding: 0 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="clinical-table">
+                <thead>
+                  <tr><th>Name</th><th>Type</th><th>Manufacturer</th><th>Lot #</th><th>Stock Conc.</th><th>Expires</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <SkeletonRow key={i} cols={7} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
           <div className="card" style={{ padding: 0 }}>
             {filtered.length === 0 ? (

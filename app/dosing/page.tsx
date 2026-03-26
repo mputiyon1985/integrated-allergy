@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
+import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 interface DosingRow {
   id: string;
@@ -108,7 +109,29 @@ export default function DosingPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading dosing schedules…</div>
+          <div className="card" style={{ padding: 0 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="clinical-table">
+                <thead>
+                  <tr>
+                    <th>Patient</th>
+                    <th>Week</th>
+                    <th>Vial</th>
+                    <th>Dose (mL)</th>
+                    <th>Phase</th>
+                    <th>Status</th>
+                    <th>Reaction</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <SkeletonRow key={i} cols={8} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
           <div className="card" style={{ padding: 0 }}>
             {filtered.length === 0 ? (

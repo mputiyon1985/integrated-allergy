@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
+import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 interface AuditEntry {
   id: string;
@@ -110,7 +111,27 @@ export default function AuditLogPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading audit log…</div>
+          <div className="card" style={{ padding: 0 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="clinical-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <SkeletonRow key={i} cols={6} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
           <div className="card" style={{ padding: 0 }}>
             {filtered.length === 0 ? (

@@ -79,6 +79,7 @@ export default function NewVialBatchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [dataReady, setDataReady]   = useState(false);
 
   // Patients
   const [patients, setPatients]     = useState<Patient[]>([]);
@@ -107,36 +108,24 @@ export default function NewVialBatchPage() {
   // Step 3
   const [vialPreviews, setVialPreviews] = useState<VialPreview[]>([]);
 
-  // ── Load patients ───────────────────────────────────────────────────────────
+  // ── Load patients + nurses + allergens ──────────────────────────────────────
   useEffect(() => {
-    fetch('/api/patients')
-      .then((r) => r.json())
-      .then((d) => {
-        const pts: Patient[] = d.patients ?? [];
-        setPatients(pts);
-        if (prePatientId) {
-          const found = pts.find((p) => p.id === prePatientId);
-          if (found) setPatientSearch(found.name);
-        }
-      })
-      .catch(() => {});
+    Promise.all([
+      fetch('/api/patients').then((r) => r.json()).catch(() => ({ patients: [] })),
+      fetch('/api/nurses?active=true').then((r) => r.json()).catch(() => ({ nurses: [] })),
+      fetch('/api/allergens').then((r) => r.json()).catch(() => ({ allergens: [] })),
+    ]).then(([pData, nData, aData]) => {
+      const pts: Patient[] = pData.patients ?? [];
+      setPatients(pts);
+      if (prePatientId) {
+        const found = pts.find((p) => p.id === prePatientId);
+        if (found) setPatientSearch(found.name);
+      }
+      setNurses(nData.nurses ?? []);
+      setAllergenOptions(aData.allergens ?? []);
+      setDataReady(true);
+    });
   }, [prePatientId]);
-
-  // ── Load nurses ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    fetch('/api/nurses?active=true')
-      .then((r) => r.json())
-      .then((d) => setNurses(d.nurses ?? []))
-      .catch(() => {});
-  }, []);
-
-  // ── Load allergens ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    fetch('/api/allergens')
-      .then((r) => r.json())
-      .then((d) => setAllergenOptions(d.allergens ?? []))
-      .catch(() => {});
-  }, []);
 
   // ── Auto-batch name ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -262,6 +251,41 @@ export default function NewVialBatchPage() {
   const filteredAllergens = allergenOptions.filter((a) =>
     !allergenSearch || a.name.toLowerCase().includes(allergenSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenSearch.toLowerCase())
   );
+
+  if (!dataReady) {
+    return (
+      <>
+        <TopBar
+          title="New Vial Batch"
+          breadcrumbs={[{ label: 'Integrated Allergy IMS' }, { label: 'Vial Prep', href: '/vial-prep' }, { label: 'New Batch' }]}
+          actions={<button className="btn btn-secondary" onClick={() => router.push('/vial-prep')}>Cancel</button>}
+        />
+        <div className="page-content">
+          {/* Step indicator skeleton */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #d1d5db', overflow: 'hidden', borderRadius: 8 }}>
+            {[1, 2, 3].map((n) => (
+              <div key={n} style={{ flex: 1, padding: '10px 16px', background: n === 1 ? '#f0f7ff' : '#fff', borderRight: n < 3 ? '1px solid #d1d5db' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ height: 24, width: 24, borderRadius: '50%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', flexShrink: 0 }} />
+                <div style={{ height: 12, width: '60%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+          {/* Form skeleton */}
+          <div className="card" style={{ padding: 24 }}>
+            <div style={{ height: 16, width: 180, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4, marginBottom: 20 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ height: 11, width: '40%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                  <div style={{ height: 34, width: '100%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 6 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

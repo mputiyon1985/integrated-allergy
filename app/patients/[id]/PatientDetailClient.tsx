@@ -425,8 +425,45 @@ export default function PatientDetailPage() {
   if (loading) {
     return (
       <>
-        <TopBar title="Patient Detail" />
-        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading patient data…</div>
+        <TopBar
+          title="Patient Detail"
+          breadcrumbs={[{ label: 'Integrated Allergy IMS' }, { label: 'Patients', href: '/patients' }, { label: '…' }]}
+        />
+        <div className="page-content">
+          {/* Header info skeleton */}
+          <div className="card" style={{ marginBottom: 16, padding: '16px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+              <div style={{ height: 48, width: 48, borderRadius: '50%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', flexShrink: 0 }} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ height: 20, width: '35%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                <div style={{ height: 13, width: '20%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+              </div>
+              <div style={{ height: 22, width: 80, borderRadius: 12, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite' }} />
+            </div>
+            {/* Tab bar skeleton */}
+            <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7eb', paddingBottom: 0 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ height: 32, width: 90, borderRadius: '6px 6px 0 0', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite' }} />
+              ))}
+            </div>
+          </div>
+          {/* Tab content skeleton */}
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              {Array.from({ length: 2 }).map((_, col) => (
+                <div key={col} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ height: 13, width: '40%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4, marginBottom: 4 }} />
+                  {Array.from({ length: 5 }).map((_, r) => (
+                    <div key={r} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div style={{ height: 12, width: '30%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                      <div style={{ height: 12, width: '55%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </>
     );
   }

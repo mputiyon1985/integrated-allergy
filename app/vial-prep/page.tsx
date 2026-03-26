@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import TopBar from '@/components/layout/TopBar';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import VialCard from '@/components/clinical/VialCard';
 import SafetyAlert from '@/components/clinical/SafetyAlert';
 import { type VialColor } from '@/lib/ui/theme';
@@ -106,7 +107,24 @@ export default function VialPrepPage() {
         />
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading vials…</div>
+          <>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card" style={{ marginBottom: 16, padding: 0 }}>
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ height: 16, width: 140, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                    <div style={{ height: 12, width: 70, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                  </div>
+                  <div style={{ height: 28, width: 100, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 6 }} />
+                </div>
+                <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <SkeletonCard key={j} height={120} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </>
         ) : batches.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🧪</div>

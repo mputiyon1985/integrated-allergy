@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import TopBar from '@/components/layout/TopBar';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import type { DashboardStats, KpiDef } from '@/components/dashboard/types';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
+import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 // Dynamically imported so react-grid-layout (and its useContainerWidth hook)
 // only runs on the client — avoids SSR issues.
@@ -287,9 +289,35 @@ export default function DashboardPage() {
 
       <div className="page-content">
         {loading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Loading dashboard…
-          </div>
+          <>
+            {/* KPI skeleton grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+              {Array.from({ length: 9 }).map((_, i) => (
+                <SkeletonCard key={i} height={110} />
+              ))}
+            </div>
+            {/* Recent activity skeleton */}
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ height: 14, width: 120, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                <div style={{ height: 11, width: 60, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="clinical-table">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th><th>Type</th><th>Patient</th><th>Details</th><th>User</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <SkeletonRow key={i} cols={5} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {!loading && stats && (

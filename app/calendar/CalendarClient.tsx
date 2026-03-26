@@ -322,7 +322,43 @@ export default function CalendarPage() {
         {/* Calendar grid */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading calendar…</div>
+            <div style={{ padding: 0 }}>
+              {/* Day-of-week header skeleton */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e5e7eb' }}>
+                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
+                  <div key={d} style={{ padding: '8px 0', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {d}
+                  </div>
+                ))}
+              </div>
+              {/* Calendar cell grid skeleton — 5 rows × 7 cols */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                {Array.from({ length: 35 }).map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      minHeight: 90,
+                      borderRight: i % 7 !== 6 ? '1px solid #f3f4f6' : 'none',
+                      borderBottom: i < 28 ? '1px solid #f3f4f6' : 'none',
+                      padding: 8,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    {/* Date number */}
+                    <div style={{ height: 20, width: 20, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: '50%' }} />
+                    {/* Random event bars */}
+                    {i % 3 === 0 && (
+                      <div style={{ height: 18, width: '90%', background: 'linear-gradient(90deg, #e8f0fe 25%, #d2e3fc 50%, #e8f0fe 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                    )}
+                    {i % 5 === 0 && (
+                      <div style={{ height: 18, width: '75%', background: 'linear-gradient(90deg, #e8f5e9 25%, #c8e6c9 50%, #e8f5e9 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : viewMode === 'month' ? (
             <MonthView date={currentDate} appointments={appointments} onDayClick={(d) => openNew(d)} onApptClick={openEdit} />
           ) : viewMode === 'week' ? (
