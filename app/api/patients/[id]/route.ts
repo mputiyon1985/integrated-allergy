@@ -68,6 +68,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     const shapedAllergens = allergenMixes.map((m) => ({
       id: m.id,
+      allergenId: m.allergenId,
       name: m.allergen.name,
       type: m.allergen.type,
       concentration: m.allergen.stockConc ?? '—',
