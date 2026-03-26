@@ -152,7 +152,7 @@ export default function Sidebar() {
                 borderLeft: active ? '3px solid #4db8ff' : '3px solid transparent',
                 transition: 'background 0.15s, color 0.15s',
               }}
-              onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = '#243050'; }}
+              onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = '#e8f9f7'; }}
               onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
             >
               <span style={{ opacity: active ? 1 : 0.7 }}>{item.icon}</span>
