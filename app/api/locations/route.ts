@@ -45,6 +45,9 @@ export async function POST(req: NextRequest) {
       sortOrder?: number;
       entityId?: string;
     };
+    if (!body.entityId) {
+      return NextResponse.json({ error: 'Entity is required — every location must belong to a business entity' }, { status: 400 });
+    }
     if (!body.name?.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
