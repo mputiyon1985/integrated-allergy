@@ -1,32 +1,67 @@
 # Auth Build Status
-Last updated: 2026-03-26 01:00 EDT
+Last updated: 2026-03-26 01:15 EDT
 
 ## Completed ✅
-- Step 1: Dependencies installed (bcryptjs, jsonwebtoken, speakeasy, qrcode, jose + types)
-- Step 2: DB tables created in Turso (BusinessEntity, AppUser, UserLocationAccess + indexes)
-- Step 2b: entityId column added to Patient, Doctor, Nurse, Appointment, ClinicLocation
-- Step 2c: Super admin seeded — mark@putiyon.com / ChangeMe123!
-- Step 3: Prisma schema updated (BusinessEntity, AppUser, UserLocationAccess models + relations)
-- Step 3b: `npx prisma generate` — passed ✅
-- Step 4: Auth API routes written:
-  - POST /api/auth/login
-  - GET+POST /api/auth/mfa-setup
-  - POST /api/auth/mfa-verify
-  - POST /api/auth/logout
-  - GET /api/auth/me
-  - lib/auth/session.ts (verifySession, canAccessEntity, canAccessLocation, requireAuth)
-  - lib/auth/turso.ts (direct Turso HTTP client for auth ops)
-- Step 5: Login page written (app/login/page.tsx) — 3-step flow: credentials → MFA verify → MFA setup
-- Step 6: proxy.ts written — protects all routes except /login + /api/auth/*
-  - Fixed: renamed middleware.ts → proxy.ts (Next.js 16 requirement)
-  - Fixed: added types/modules.d.ts for speakeasy/qrcode type declarations
-- Step 7a: `npm run build` — PASSED ✅ (clean, no warnings)
-- Step 7b: git commit + push — DONE ✅ (commit 8cdf656)
-- JWT_SECRET confirmed present in Vercel env vars
 
-## In Progress 🔄
-- Step 7c: Vercel production deploy — deploying now...
+### Step 1: Dependencies
+- bcryptjs, jsonwebtoken, speakeasy, qrcode, jose installed
+- @types/* added (devDependencies + custom module declarations for Vercel)
+
+### Step 2: Turso DB Setup
+- BusinessEntity table created
+- AppUser table created (with role, mfaEnabled, mfaSecret)
+- UserLocationAccess table created
+- Indexes on email, entityId, userId
+- entityId column added to: Patient, Doctor, Nurse, Appointment, ClinicLocation
+- **Super admin seeded:** mark@putiyon.com / ChangeMe123!
+
+### Step 3: Prisma Schema
+- BusinessEntity model added
+- AppUser model added with relations
+- UserLocationAccess model added
+- All existing models updated with optional entityId + BusinessEntity relation
+- `npx prisma generate` — passed ✅
+
+### Step 4: Auth API Routes
+- `POST /api/auth/login` — email/password, returns requiresMfa or requiresMfaSetup
+- `GET /api/auth/mfa-setup` — generates TOTP secret + QR code PNG
+- `POST /api/auth/mfa-setup` — verifies first TOTP code, activates MFA, issues session JWT
+- `POST /api/auth/mfa-verify` — verifies TOTP code, issues session JWT
+- `POST /api/auth/logout` — clears session cookie
+- `GET /api/auth/me` — returns current user context from session JWT
+- `lib/auth/session.ts` — verifySession, canAccessEntity, canAccessLocation, requireAuth
+- `lib/auth/turso.ts` — direct Turso HTTP client for auth operations
+
+### Step 5: Login Page
+- `app/login/page.tsx` — 3-step flow:
+  1. Email + Password
+  2. MFA code entry (6-digit TOTP)
+  3. MFA setup (QR code + first code confirmation)
+- Clean teal header, professional clinical design
+
+### Step 6: Proxy (Route Guard)
+- `proxy.ts` — protects all routes except /login + /api/auth/*
+- Injects user context headers (x-user-id, x-user-role, x-user-entity, x-user-locations)
+- Redirects to /login with ?from= param on invalid/missing session
+
+### Step 7: Build + Deploy
+- `npm run build` — PASSED ✅ (no warnings)
+- git commit + push — DONE ✅ (commit 98160ad)
+- Vercel production deploy — PASSED ✅
+- **Live URL:** https://integrated-allergy.vercel.app
+
+## Smoke Test Results ✅
+- `GET /login` → 200 ✅
+- `GET /dashboard` → 307 redirect to /login ✅ (auth guard working)
+- `POST /api/auth/login` mark@putiyon.com / ChangeMe123! → `{ requiresMfaSetup: true, tempToken: "..." }` ✅
 
 ## Remaining ⏳
-- Confirm deployment URL is live and /login page loads
-- Report temp password + deployment URL
+- Nothing! Auth system is fully deployed and functional.
+
+---
+
+## Credentials
+- **Email:** mark@putiyon.com
+- **Temp Password:** `ChangeMe123!`
+- **Login URL:** https://integrated-allergy.vercel.app/login
+- **Flow:** Login → MFA Setup (scan QR with Authenticator app) → Dashboard
