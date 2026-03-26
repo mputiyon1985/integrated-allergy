@@ -1,6 +1,6 @@
 /**
  * GET    /api/locations/[id]  — Get one location
- * PUT    /api/locations/[id]  — Update (name, address, active, sortOrder)
+ * PUT    /api/locations/[id]  — Update (name, address, phone, active, sortOrder, entityId)
  * DELETE /api/locations/[id]  — Soft delete
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,14 +18,23 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const body = await req.json() as { name?: string; address?: string; active?: boolean; sortOrder?: number };
+    const body = await req.json() as {
+      name?: string;
+      address?: string;
+      phone?: string;
+      active?: boolean;
+      sortOrder?: number;
+      entityId?: string | null;
+    };
     const location = await prisma.clinicLocation.update({
       where: { id },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
         ...(body.address !== undefined && { address: body.address?.trim() || null }),
+        ...(body.phone !== undefined && { phone: body.phone?.trim() || null }),
         ...(body.active !== undefined && { active: body.active }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.entityId !== undefined && { entityId: body.entityId || null }),
       },
     });
     await prisma.auditLog.create({

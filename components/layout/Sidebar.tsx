@@ -206,9 +206,8 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Setup — pinned at bottom above footer */}
+      {/* Settings — pinned at bottom above footer */}
       <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0', flexShrink: 0 }}>
-        <div style={{ padding: '6px 16px 2px', color: '#9ca3af', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Setup</div>
         <Link
           href="/settings"
           style={{
@@ -235,39 +234,6 @@ export default function Sidebar() {
           </svg>
           Settings
         </Link>
-        {userRole === 'super_admin' && (() => {
-          const usersActive = isActive('/users');
-          return (
-            <Link
-              href="/users"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 16px',
-                color: usersActive ? '#0d9488' : '#374151',
-                fontWeight: usersActive ? 700 : 500,
-                fontSize: 14,
-                textDecoration: 'none',
-                borderRadius: 8,
-                margin: '0 4px',
-                background: usersActive ? '#e8f9f7' : 'transparent',
-                borderLeft: usersActive ? '3px solid #4db8ff' : '3px solid transparent',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={(e) => { if (!usersActive) (e.currentTarget as HTMLAnchorElement).style.background = '#f3f4f6'; }}
-              onMouseLeave={(e) => { if (!usersActive) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: usersActive ? 1 : 0.7 }}>
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              Users
-            </Link>
-          );
-        })()}
       </div>
 
       {/* Footer */}

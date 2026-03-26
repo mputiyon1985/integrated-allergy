@@ -212,6 +212,7 @@ model ClinicLocation {
   id             String               @id @default(cuid())
   name           String
   address        String?
+  phone          String?
   active         Boolean              @default(true)
   sortOrder      Int                  @default(0)
   createdAt      DateTime             @default(now())

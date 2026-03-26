@@ -12,9 +12,22 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const activeOnly = searchParams.get('active') === 'true';
+    const entityId = searchParams.get('entityId');
+
+    const where: Record<string, unknown> = activeOnly
+      ? { active: true, deletedAt: null }
+      : { deletedAt: null };
+
+    if (entityId) {
+      where.entityId = entityId;
+    }
+
     const locations = await prisma.clinicLocation.findMany({
-      where: activeOnly ? { active: true, deletedAt: null } : { deletedAt: null },
+      where,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: {
+        entity: { select: { id: true, name: true } },
+      },
     });
     return NextResponse.json({ locations });
   } catch (err) {
@@ -25,7 +38,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { name: string; address?: string; sortOrder?: number };
+    const body = await req.json() as {
+      name: string;
+      address?: string;
+      phone?: string;
+      sortOrder?: number;
+      entityId?: string;
+    };
     if (!body.name?.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -34,6 +53,7 @@ export async function POST(req: NextRequest) {
         name: body.name.trim(),
         address: body.address?.trim() || null,
         sortOrder: body.sortOrder ?? 0,
+        ...(body.entityId && { entityId: body.entityId }),
       },
     });
     await prisma.auditLog.create({
