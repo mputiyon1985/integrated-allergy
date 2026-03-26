@@ -1,3 +1,19 @@
+/**
+ * @file /api/patients/[id]/schedule — Dosing schedule API
+ *
+ * @description
+ * Manages the week-by-week immunotherapy dosing schedule for a patient.
+ *
+ * GET  /api/patients/[id]/schedule  — Returns all dose records for the patient, ordered by
+ *                                     week number. Each record includes: weekNumber, doseMl,
+ *                                     phase (buildup/maintenance), administered, administeredAt,
+ *                                     reaction, notes, and linked vial details.
+ *
+ * POST /api/patients/[id]/schedule  — Generates a 10-week buildup schedule for a given vial
+ *                                     using the AAAI `generateBuildupSchedule()` engine.
+ *                                     Body: { vialId, vialNumber, startWeek? }
+ *                                     Returns the created dose records with HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { generateBuildupSchedule } from '@/lib/clinical/dilution'

@@ -1,3 +1,18 @@
+/**
+ * @file /api/appointments — Appointment scheduling API
+ *
+ * @description
+ * Manages patient appointments for the integrated calendar and scheduling module.
+ *
+ * GET  /api/appointments  — Returns appointments with optional filtering.
+ *   Query params: patientId, from (ISO date), to (ISO date), type (shot|skin_test|evaluation|follow_up|other)
+ *   Response includes patient summary (id, name, patientId) via relation join.
+ *
+ * POST /api/appointments  — Creates a new appointment and logs to AuditLog.
+ *   Required: patientId, type, title, startTime (ISO), endTime (ISO).
+ *   Optional: provider, notes, status (default: 'scheduled').
+ *   Returns the created appointment with patient context, HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

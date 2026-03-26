@@ -1,3 +1,18 @@
+/**
+ * @file /api/nurses — Nursing staff API
+ *
+ * @description
+ * Manages the clinic's nursing and clinical support staff directory.
+ * Supports credential types: RN, LPN, MA, CMA, NP.
+ *
+ * GET  /api/nurses  — Returns all nursing staff ordered by name.
+ *                     Query: `?active=true` to filter to active staff only.
+ *
+ * POST /api/nurses  — Adds a new nurse/clinical staff member.
+ *                     Required: `name`.
+ *                     Optional: title (RN default), email, phone, clinicLocation, npi.
+ *                     Logs to AuditLog. Returns the created nurse with HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

@@ -1,3 +1,15 @@
+/**
+ * @file /api/doctors/[id] — Single physician API
+ *
+ * @description
+ * CRUD operations for an individual physician record.
+ *
+ * PATCH  /api/doctors/[id]  — Partial update of physician fields (name, title, specialty,
+ *                             email, phone, clinicLocation, npi, active).
+ *                             Logs to AuditLog on change.
+ * DELETE /api/doctors/[id]  — Deactivates the physician (sets active: false) rather than
+ *                             hard-deleting to preserve patient record integrity.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

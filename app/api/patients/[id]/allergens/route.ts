@@ -1,3 +1,17 @@
+/**
+ * @file /api/patients/[id]/allergens — Patient allergen mix API
+ *
+ * @description
+ * Manages the allergen mix formulation for a specific patient.
+ *
+ * GET  /api/patients/[id]/allergens  — Returns the patient's current allergen mix
+ *                                      with full allergen details and per-allergen volumes (mL).
+ *
+ * POST /api/patients/[id]/allergens  — Replaces the patient's allergen mix entirely.
+ *                                      Accepts an array of { allergenId, volumeMl } objects.
+ *                                      Deletes existing mix entries before creating new ones.
+ *                                      Logs the update to AuditLog.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

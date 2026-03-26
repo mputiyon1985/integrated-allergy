@@ -1,3 +1,21 @@
+/**
+ * @file /api/vial-batches — Vial batch compounding API
+ *
+ * @description
+ * Orchestrates the full vial compounding workflow for a patient:
+ * generates the 4-vial AAAI dilution series and auto-creates the 10-week
+ * buildup dosing schedule. Validates allergen mix safety before compounding.
+ *
+ * POST /api/vial-batches  — Compounds a new vial batch for a patient.
+ *   Required body: { patientId }
+ *   Process:
+ *     1. Loads the patient's allergen mix and runs safety validation
+ *     2. Generates 4 vials (Silver/Blue/Yellow/Red) via dilution engine
+ *     3. Creates a 10-week buildup schedule for the first vial
+ *     4. Logs the compounding event to AuditLog
+ *   Returns: { vials[], schedule[], warnings[] } with HTTP 201
+ *   Warnings are non-blocking (proteolytic incompatibility alerts); errors block compounding.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { validateAllergenMix, validateGlycerin } from '@/lib/clinical/safety';

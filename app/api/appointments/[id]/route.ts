@@ -1,3 +1,17 @@
+/**
+ * @file /api/appointments/[id] — Single appointment API
+ *
+ * @description
+ * Update and delete operations for individual appointment records.
+ *
+ * PATCH  /api/appointments/[id]  — Partial update of appointment fields.
+ *   Accepts any subset of: type, title, startTime, endTime, provider, notes, status.
+ *   Status transitions: scheduled → confirmed → completed / cancelled / no_show.
+ *   Logs status changes to AuditLog.
+ *
+ * DELETE /api/appointments/[id]  — Permanently removes the appointment record.
+ *   For clinical auditing, consider setting status: 'cancelled' instead of hard delete.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

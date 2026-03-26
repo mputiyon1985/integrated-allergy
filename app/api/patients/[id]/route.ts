@@ -1,3 +1,13 @@
+/**
+ * @file /api/patients/[id] — Single patient API
+ *
+ * @description
+ * CRUD operations for an individual patient record.
+ *
+ * GET    /api/patients/[id]  — Returns full patient detail including related doctor record.
+ * PATCH  /api/patients/[id]  — Partial update of patient fields. Logs to AuditLog on change.
+ * DELETE /api/patients/[id]  — Removes patient record (use with caution; prefer deactivation).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

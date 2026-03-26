@@ -1,3 +1,15 @@
+/**
+ * @file /api/patients/[id]/schedule/[doseId] — Individual dose record API
+ *
+ * @description
+ * Updates a single dosing schedule entry (e.g., to mark a shot as administered).
+ *
+ * PATCH /api/patients/[id]/schedule/[doseId]  — Partially updates a dose record.
+ *   Common use: mark a dose as administered after injection.
+ *   Body (partial): { administered?, administeredAt?, reaction?, notes?, doseMl?, phase? }
+ *   Logs the administration event to AuditLog with dose details.
+ *   Returns the updated dose record.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

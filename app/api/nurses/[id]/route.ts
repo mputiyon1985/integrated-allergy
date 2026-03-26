@@ -1,3 +1,15 @@
+/**
+ * @file /api/nurses/[id] — Single nurse/staff API
+ *
+ * @description
+ * CRUD operations for an individual nursing staff record.
+ *
+ * PATCH  /api/nurses/[id]  — Partial update of nurse fields (name, title, email,
+ *                            phone, clinicLocation, npi, active).
+ *                            Logs to AuditLog on change.
+ * DELETE /api/nurses/[id]  — Deactivates the nurse (sets active: false) to preserve
+ *                            referential integrity in clinical records.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

@@ -1,3 +1,18 @@
+/**
+ * @file /api/doctors — Physician roster API
+ *
+ * @description
+ * Manages the clinic's physician directory. Doctors are linked to patient records
+ * and appear in patient enrollment forms for physician assignment.
+ *
+ * GET  /api/doctors           — Returns all physicians ordered by name.
+ *                               Query: `?active=true` to filter to active physicians only.
+ *
+ * POST /api/doctors           — Adds a new physician to the roster.
+ *                               Required: `name`.
+ *                               Optional: title (MD), specialty, email, phone, clinicLocation, npi.
+ *                               Logs to AuditLog. Returns the created doctor with HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

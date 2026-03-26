@@ -1,3 +1,18 @@
+/**
+ * @file /api/allergens — Allergen library API
+ *
+ * @description
+ * Manages the clinic's allergen extract library used for patient mix formulation.
+ *
+ * GET  /api/allergens  — Returns all allergens sorted alphabetically by name.
+ *                        Response includes: id, name, type, manufacturer, lotNumber,
+ *                        stockConcentration, expiryDate, inStock (derived from expiresAt).
+ *
+ * POST /api/allergens  — Adds a new allergen to the library.
+ *                        Required: `name`. Optional: type, manufacturer, lotNumber,
+ *                        stockConcentration, expiryDate.
+ *                        Returns the created allergen with HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

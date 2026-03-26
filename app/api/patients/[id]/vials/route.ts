@@ -1,3 +1,17 @@
+/**
+ * @file /api/patients/[id]/vials — Patient vial management API
+ *
+ * @description
+ * Manages the compounded vial set for a specific patient.
+ *
+ * GET  /api/patients/[id]/vials  — Returns all vials for the patient ordered by vial number (1-4).
+ *                                  Response includes: vialNumber, dilutionRatio, colorCode,
+ *                                  totalVolumeMl, glycerinPercent, expiresAt.
+ *
+ * POST /api/patients/[id]/vials  — Generates a new 4-vial AAAI dilution series for the patient
+ *                                  using the `generateVials()` dilution engine.
+ *                                  Returns the created vials with HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { generateVials } from '@/lib/clinical/dilution'

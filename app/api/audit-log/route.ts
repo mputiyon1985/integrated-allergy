@@ -1,3 +1,20 @@
+/**
+ * @file /api/audit-log — System audit log API
+ *
+ * @description
+ * Provides paginated, filterable access to the system-wide AuditLog for compliance,
+ * clinical review, and accreditation purposes. Every create/update/delete action in
+ * the system is automatically written to this log.
+ *
+ * GET /api/audit-log — Returns paginated audit log entries with patient context.
+ *   Query params:
+ *     patientId  — Filter to a specific patient's audit history
+ *     entity     — Filter by entity type (Patient, Doctor, Nurse, Appointment, Vial, etc.)
+ *     limit      — Number of records to return (default: 100, max: 500)
+ *     offset     — Pagination offset (default: 0)
+ *   Response: { entries[], total, limit, offset }
+ *   Each entry: { id, timestamp, action, entity, entityId, user, details, patient }
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

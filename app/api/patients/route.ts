@@ -1,3 +1,17 @@
+/**
+ * @file /api/patients — Patient roster API
+ *
+ * @description
+ * Manages the core patient registry for the Integrated Allergy IMS.
+ *
+ * GET  /api/patients         — Returns all enrolled patients ordered by enrollment date.
+ *                              Response shape includes derived `status` field (Build-Up).
+ *
+ * POST /api/patients         — Enrolls a new patient. Auto-generates a `patientId` (PA-XXX-XXXXX)
+ *                              if not provided. Creates an AuditLog entry on success.
+ *                              Required: `name` (or `firstName`+`lastName`), `dob`, `physician`.
+ *                              Returns: `{ id, patientId, name, dob, physician, status }` with HTTP 201.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 

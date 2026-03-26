@@ -1,3 +1,14 @@
+/**
+ * @file /api/audit — Alias for /api/audit-log
+ *
+ * @description
+ * Convenience alias route providing the same paginated audit log as /api/audit-log.
+ * Exists for backward compatibility with earlier API consumers.
+ *
+ * GET /api/audit — See /api/audit-log for full parameter and response documentation.
+ *   Query params: patientId, entity, limit, offset
+ *   Response: { entries[], total, limit, offset }
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 

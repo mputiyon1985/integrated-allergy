@@ -1,3 +1,22 @@
+/**
+ * @file /api/dashboard — Dashboard KPIs and activity feed API
+ *
+ * @description
+ * Aggregates real-time clinical statistics and recent system activity for the
+ * dashboard landing page. Executes all queries in parallel via Promise.all for performance.
+ *
+ * GET /api/dashboard — Returns:
+ *   stats: {
+ *     totalPatients       — All enrolled patients (count)
+ *     activeTreatments    — Vials with expiresAt in the future (count)
+ *     vialsExpiringSoon   — Vials expiring within 30 days (count)
+ *     dosesThisWeek       — Shots administered in past 7 days (count)
+ *     shotsToday          — Shot-type appointments scheduled today (count)
+ *     testsToday          — Skin test appointments today (count)
+ *     evalsToday          — Evaluation appointments today (count)
+ *   }
+ *   activity — 20 most recent audit log entries with patient context
+ */
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
