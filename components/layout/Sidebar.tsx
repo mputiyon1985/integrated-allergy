@@ -2,6 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
+interface SidebarSettings {
+  clinic_name: string;
+  version_label: string;
+}
 
 const NAV_ITEMS = [
   {
@@ -108,28 +114,50 @@ const NAV_ITEMS = [
   },
 ];
 
+const DEFAULTS: SidebarSettings = {
+  clinic_name: 'Integrated Allergy',
+  version_label: 'IMS v2.0 · © 2026',
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const [sidebarSettings, setSidebarSettings] = useState<SidebarSettings>(DEFAULTS);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        setSidebarSettings({
+          clinic_name: data.clinic_name || DEFAULTS.clinic_name,
+          version_label: data.version_label || DEFAULTS.version_label,
+        });
+      })
+      .catch(() => { /* keep defaults on error */ });
+  }, []);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
     return pathname.startsWith(href);
   };
 
+  const settingsActive = isActive('/settings');
+
   return (
-    <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff' }}>
+    <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
       {/* Clinic branding */}
-      <div style={{ padding: '10px 0 10px 8px', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ padding: '10px 0 10px 8px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
         <img
           src="/integrated-allergy-logo.jpg"
-          alt="Integrated Allergy"
+          alt={sidebarSettings.clinic_name}
           style={{ height: 55, width: 'auto', display: 'block' }}
         />
-        <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 8, paddingLeft: 2 }}>IMS v2.0 · © 2026</div>
+        <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 8, paddingLeft: 2 }}>
+          {sidebarSettings.version_label}
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '8px 0' }}>
+      <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
         <div style={{ padding: '8px 16px 4px', color: '#9ca3af', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           Navigation
         </div>
@@ -162,9 +190,39 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Settings link — pinned at bottom above footer */}
+      <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0', flexShrink: 0 }}>
+        <Link
+          href="/settings"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 16px',
+            color: settingsActive ? '#0d9488' : '#374151',
+            fontWeight: settingsActive ? 700 : 500,
+            fontSize: 14,
+            textDecoration: 'none',
+            borderRadius: 8,
+            margin: '0 4px',
+            background: settingsActive ? '#e8f9f7' : 'transparent',
+            borderLeft: settingsActive ? '3px solid #4db8ff' : '3px solid transparent',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = '#f3f4f6'; }}
+          onMouseLeave={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: settingsActive ? 1 : 0.7 }}>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          Settings
+        </Link>
+      </div>
+
       {/* Footer */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', color: '#9ca3af', fontSize: 11 }}>
-        <div>© 2026 Integrated Allergy</div>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', color: '#9ca3af', fontSize: 11, flexShrink: 0 }}>
+        <div>© 2026 {sidebarSettings.clinic_name}</div>
         <div style={{ marginTop: 2 }}>Clinical IMS Platform</div>
       </div>
     </aside>

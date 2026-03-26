@@ -44,8 +44,8 @@ const EMPTY_FORM: PatientFormData = {
   notes: '',
 };
 
-const LOCATIONS = ['Main Clinic — Dumfries, VA', 'North Branch — Woodbridge, VA', 'South Branch — Stafford, VA'];
-const DIAGNOSES = [
+const DEFAULT_LOCATIONS = ['Main Clinic — Dumfries, VA', 'North Branch — Woodbridge, VA', 'South Branch — Stafford, VA'];
+const DEFAULT_DIAGNOSES = [
   'Allergic Rhinitis',
   'Asthma',
   'Asthma + Allergic Rhinitis',
@@ -54,12 +54,23 @@ const DIAGNOSES = [
   'Other',
 ];
 
+function parseJsonArray(val: string | undefined, fallback: string[]): string[] {
+  if (!val) return fallback;
+  try {
+    const parsed = JSON.parse(val);
+    if (Array.isArray(parsed)) return parsed as string[];
+  } catch { /* ignore */ }
+  return fallback;
+}
+
 export default function NewPatientPage() {
   const router = useRouter();
   const [form, setForm] = useState<PatientFormData>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
+  const [diagnoses, setDiagnoses] = useState<string[]>(DEFAULT_DIAGNOSES);
 
   // Support ?doctorId= query param pre-population
   useEffect(() => {
@@ -68,6 +79,17 @@ export default function NewPatientPage() {
     if (doctorIdParam) {
       setForm((f) => ({ ...f, doctorId: doctorIdParam }));
     }
+  }, []);
+
+  // Load clinic locations and diagnosis options from settings
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        setLocations(parseJsonArray(data.clinic_locations, DEFAULT_LOCATIONS));
+        setDiagnoses(parseJsonArray(data.diagnosis_options, DEFAULT_DIAGNOSES));
+      })
+      .catch(() => { /* keep defaults */ });
   }, []);
 
   useEffect(() => {
@@ -275,7 +297,7 @@ export default function NewPatientPage() {
                   onChange={(e) => set('clinicLocation', e.target.value)}
                 >
                   <option value="">Select location…</option>
-                  {LOCATIONS.map((l) => (
+                  {locations.map((l) => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
@@ -288,7 +310,7 @@ export default function NewPatientPage() {
                   onChange={(e) => set('diagnosis', e.target.value)}
                 >
                   <option value="">Select diagnosis…</option>
-                  {DIAGNOSES.map((d) => (
+                  {diagnoses.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
