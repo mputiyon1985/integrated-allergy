@@ -153,6 +153,11 @@ export default function PatientDetailPage() {
   // Multi-select state: { allergenId -> volumeMl }
   const [selectedAllergens, setSelectedAllergens] = useState<Record<string, string>>({});
   const [addingAllergens, setAddingAllergens] = useState(false);
+  // Edit-allergen mode: if set, picker is editing an existing mix row
+  const [editingMixId, setEditingMixId] = useState<string | null>(null);
+  // Remove confirm dialog
+  const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     if (tabParam !== null) setActiveTab(parseInt(tabParam));
@@ -270,6 +275,69 @@ export default function PatientDetailPage() {
       setAllergenError('Network error. Please try again.');
     } finally {
       setAddingAllergen(false);
+    }
+  };
+
+  // ── Open picker to edit an existing allergen row ───────────────────────────
+  const openEditAllergen = (a: AllergenMixItem) => {
+    setEditingMixId(a.id);
+    // Pre-check only that one allergen with its current volume
+    setSelectedAllergens({ [a.id]: String(a.volume) });
+    setAllergenPickerSearch('');
+    setAllergenError(null);
+    setShowAllergenPicker(true);
+  };
+
+  // ── Save edited volume via PATCH ────────────────────────────────────────────
+  const handleSaveEditAllergen = async () => {
+    if (!editingMixId) return;
+    const entry = Object.entries(selectedAllergens)[0];
+    if (!entry) return;
+    const [, volumeStr] = entry;
+    const volumeNum = parseFloat(volumeStr);
+    if (!volumeNum || volumeNum <= 0) { setAllergenError('Please enter a valid volume.'); return; }
+    setAddingAllergens(true);
+    try {
+      const res = await fetch(`/api/patients/${patientDbId}/allergens/${editingMixId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ volumeMl: volumeNum }),
+      });
+      if (res.ok) {
+        const updated = await res.json() as AllergenMixItem;
+        setAllergens((prev) => prev.map((a) => a.id === editingMixId ? { ...a, volume: updated.volume } : a));
+        setShowAllergenPicker(false);
+        setEditingMixId(null);
+        setSelectedAllergens({});
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setAllergenError(data.error ?? 'Failed to update volume.');
+      }
+    } catch {
+      setAllergenError('Network error. Please try again.');
+    } finally {
+      setAddingAllergens(false);
+    }
+  };
+
+  // ── Soft-delete allergen from mix ───────────────────────────────────────────
+  const handleRemoveAllergen = async (mixId: string) => {
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/patients/${patientDbId}/allergens/${mixId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAllergens((prev) => prev.filter((a) => a.id !== mixId));
+        setRemoveConfirm(null);
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setAllergenError(data.error ?? 'Failed to remove allergen.');
+        setRemoveConfirm(null);
+      }
+    } catch {
+      setAllergenError('Network error. Please try again.');
+      setRemoveConfirm(null);
+    } finally {
+      setRemoving(false);
     }
   };
 
