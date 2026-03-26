@@ -41,7 +41,7 @@ interface TitleRow { id: string; name: string; active: boolean; }
 
 type TileId =
   | 'branding' | 'notifications' | 'appearance' | 'clinic' | 'security' | 'export'
-  | 'diagnoses' | 'doctor-titles' | 'nurse-titles'
+  | 'diagnoses' | 'doctor-titles' | 'nurse-titles' | 'allergens'
   | 'entities' | 'entity-locations' | 'users' | 'audit-log';
 
 // ─── Layout persistence ───────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ const LAYOUT_KEY = 'ia-settings-layout-v3';
 
 const ALL_TILE_IDS: TileId[] = [
   'branding', 'notifications', 'appearance', 'clinic', 'security', 'export',
-  'diagnoses', 'doctor-titles', 'nurse-titles',
+  'diagnoses', 'doctor-titles', 'nurse-titles', 'allergens',
   'entities', 'entity-locations', 'users', 'audit-log',
 ];
 
@@ -451,6 +451,10 @@ export default function SettingsPage() {
     {
       id: 'nurse-titles' as TileId,
       node: <NurseTitlesTile {...tileProps('nurse-titles')} />,
+    },
+    {
+      id: 'allergens' as TileId,
+      node: <AllergensTile {...tileProps('allergens')} />,
     },
     {
       id: 'entities' as TileId,
@@ -1286,7 +1290,150 @@ function NurseTitlesTile({ open, onToggle, editMode }: { open: boolean; onToggle
   );
 }
 
-// ─── TILE 11: Entities ────────────────────────────────────────────────────────
+// ─── TILE 11: Allergens ───────────────────────────────────────────────────────
+
+interface AllergenRow {
+  id: string;
+  name: string;
+  type: string;
+  manufacturer: string;
+  stockConcentration: string;
+  active: boolean;
+}
+
+const ALLERGEN_TYPES = ['pollen', 'mold', 'dust', 'animal', 'insect', 'food', 'other'];
+
+function AllergensTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean; }) {
+  const [rows, setRows]           = useState<AllergenRow[]>([]);
+  const [loading, setLoading]     = useState(false);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [addName, setAddName]     = useState('');
+  const [addType, setAddType]     = useState('pollen');
+  const [addMfr, setAddMfr]       = useState('');
+  const [addConc, setAddConc]     = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName]   = useState('');
+  const [editType, setEditType]   = useState('pollen');
+  const [editMfr, setEditMfr]     = useState('');
+  const [editConc, setEditConc]   = useState('');
+  const [saving, setSaving]       = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const d = await fetch('/api/allergens').then((r) => r.json()) as { allergens: { id: string; name: string; type: string; manufacturer: string; stockConcentration: string }[] };
+      setRows((d.allergens ?? []).map((a) => ({ ...a, active: true })));
+    } catch { setRows([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { if (open) load(); }, [open, load]);
+
+  const handleAdd = async () => {
+    if (!addName.trim()) return;
+    setSaving(true);
+    await fetch('/api/allergens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: addName.trim(), type: addType, manufacturer: addMfr.trim(), stockConcentration: addConc.trim() }),
+    });
+    setAddName(''); setAddType('pollen'); setAddMfr(''); setAddConc('');
+    setShowAdd(false); setSaving(false);
+    load();
+  };
+
+  const startEdit = (row: AllergenRow) => {
+    setEditingId(row.id);
+    setEditName(row.name);
+    setEditType(row.type || 'pollen');
+    setEditMfr(row.manufacturer || '');
+    setEditConc(row.stockConcentration || '');
+  };
+
+  const saveEdit = async (id: string) => {
+    await fetch(`/api/allergens/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editName.trim(), type: editType, manufacturer: editMfr.trim(), stockConcentration: editConc.trim() }),
+    });
+    setEditingId(null);
+    load();
+  };
+
+  const toggleRow = async (row: AllergenRow) => {
+    // Allergens use soft-delete only; toggle is a no-op shown as deactivate → delete
+    if (!confirm(`Deactivate/delete "${row.name}"?`)) return;
+    await fetch(`/api/allergens/${row.id}`, { method: 'DELETE' });
+    load();
+  };
+
+  const deleteRow = async (row: AllergenRow) => {
+    if (!confirm(`Delete "${row.name}"?`)) return;
+    await fetch(`/api/allergens/${row.id}`, { method: 'DELETE' });
+    load();
+  };
+
+  return (
+    <SettingsTile id="allergens" icon="🌿" title="Allergens" editMode={editMode}
+      description="Manage allergen extract library used in patient mix formulation" open={open} onToggle={onToggle}>
+      <LookupTable
+        rows={rows} loading={loading}
+        extraCol={{ header: 'Type', render: (r: AllergenRow) => r.type ? r.type.charAt(0).toUpperCase() + r.type.slice(1) : '—' }}
+        showAdd={showAdd} onShowAdd={setShowAdd}
+        editingId={editingId}
+        onEdit={startEdit}
+        onToggle={toggleRow}
+        onDelete={deleteRow}
+        addForm={
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+              <div><Label>Name</Label><input className="form-input" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="e.g. Timothy Grass" /></div>
+              <div>
+                <Label>Type</Label>
+                <select className="form-input" value={addType} onChange={(e) => setAddType(e.target.value)}>
+                  {ALLERGEN_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div><Label>Manufacturer</Label><input className="form-input" value={addMfr} onChange={(e) => setAddMfr(e.target.value)} placeholder="e.g. Greer" /></div>
+              <div><Label>Stock Conc.</Label><input className="form-input" value={addConc} onChange={(e) => setAddConc(e.target.value)} placeholder="e.g. 1:20" /></div>
+            </div>
+            <button className="btn btn-teal" style={{ alignSelf: 'flex-start', fontSize: 12 }}
+              onClick={handleAdd} disabled={saving || !addName.trim()}>
+              {saving ? 'Saving…' : '✓ Add Allergen'}
+            </button>
+          </div>
+        }
+        editForm={
+          editingId ? (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+                <div><Label>Name</Label><input className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+                <div>
+                  <Label>Type</Label>
+                  <select className="form-input" value={editType} onChange={(e) => setEditType(e.target.value)}>
+                    {ALLERGEN_TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div><Label>Manufacturer</Label><input className="form-input" value={editMfr} onChange={(e) => setEditMfr(e.target.value)} /></div>
+                <div><Label>Stock Conc.</Label><input className="form-input" value={editConc} onChange={(e) => setEditConc(e.target.value)} /></div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-teal" style={{ fontSize: 12 }} onClick={() => saveEdit(editingId)}>Save</button>
+                <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setEditingId(null)}>Cancel</button>
+              </div>
+            </div>
+          ) : null
+        }
+      />
+    </SettingsTile>
+  );
+}
+
+// ─── TILE 12: Entities ────────────────────────────────────────────────────────
 
 const AVATAR_COLORS_ENT = [
   '#0055a5', '#059669', '#7c3aed', '#b45309', '#dc2626',
@@ -1488,18 +1635,28 @@ function EntitiesTile({ open, onToggle, editMode }: { open: boolean; onToggle: (
   );
 }
 
-// ─── TILE 12: Entity Locations ────────────────────────────────────────────────
+// ─── TILE 13: Entity Locations ────────────────────────────────────────────────
+
+interface EntityLocLookupRow extends EntityLocRow {
+  active: boolean;
+}
 
 function EntityLocationsTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean }) {
-  const [rows, setRows] = useState<EntityLocRow[]>([]);
-  const [entities, setEntities] = useState<EntityRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [rows, setRows]           = useState<EntityLocLookupRow[]>([]);
+  const [entities, setEntities]   = useState<EntityRow[]>([]);
+  const [loading, setLoading]     = useState(false);
   const [filterEntityId, setFilterEntityId] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<EntityLocRow | null>(null);
-  const [form, setForm] = useState({ name: '', entityId: '', address: '', phone: '', active: true });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [addName, setAddName]     = useState('');
+  const [addEntityId, setAddEntityId] = useState('');
+  const [addAddress, setAddAddress] = useState('');
+  const [addPhone, setAddPhone]   = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName]   = useState('');
+  const [editEntityId, setEditEntityId] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [saving, setSaving]       = useState(false);
 
   const loadEntities = useCallback(async () => {
     try {
@@ -1512,7 +1669,7 @@ function EntityLocationsTile({ open, onToggle, editMode }: { open: boolean; onTo
     setLoading(true);
     try {
       const url = filterEntityId ? `/api/locations?entityId=${filterEntityId}` : '/api/locations';
-      const d = await fetch(url).then((r) => r.json()) as { locations: EntityLocRow[] };
+      const d = await fetch(url).then((r) => r.json()) as { locations: EntityLocLookupRow[] };
       setRows(d.locations ?? []);
     } catch { setRows([]); }
     finally { setLoading(false); }
@@ -1521,134 +1678,123 @@ function EntityLocationsTile({ open, onToggle, editMode }: { open: boolean; onTo
   useEffect(() => { if (open) { loadEntities(); } }, [open, loadEntities]);
   useEffect(() => { if (open) load(); }, [open, load]);
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm({ name: '', entityId: filterEntityId, address: '', phone: '', active: true });
-    setFormError(null); setShowModal(true);
-  };
-
-  const openEdit = (row: EntityLocRow) => {
-    setEditing(row);
-    setForm({ name: row.name, entityId: row.entityId ?? '', address: row.address ?? '', phone: row.phone ?? '', active: row.active });
-    setFormError(null); setShowModal(true);
-  };
-
-  const handleSave = async () => {
-    if (!form.name.trim()) { setFormError('Location name is required'); return; }
-    if (!form.entityId) { setFormError('Entity is required'); return; }
-    setSaving(true); setFormError(null);
-    try {
-      const url = editing ? `/api/locations/${editing.id}` : '/api/locations';
-      const method = editing ? 'PUT' : 'POST';
-      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-      const data = await r.json();
-      if (!r.ok) { setFormError((data as { error?: string }).error ?? 'Failed to save'); return; }
-      setShowModal(false); load();
-    } catch { setFormError('Network error'); }
-    finally { setSaving(false); }
-  };
-
-  const toggleActive = async (row: EntityLocRow) => {
-    await fetch(`/api/locations/${row.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !row.active }) });
+  const handleAdd = async () => {
+    if (!addName.trim()) return;
+    if (!addEntityId) { alert('Please select an entity'); return; }
+    setSaving(true);
+    await fetch('/api/locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: addName.trim(), entityId: addEntityId, address: addAddress.trim(), phone: addPhone.trim(), active: true }),
+    });
+    setAddName(''); setAddEntityId(''); setAddAddress(''); setAddPhone('');
+    setShowAdd(false); setSaving(false);
     load();
   };
 
-  const handleDelete = async (row: EntityLocRow) => {
+  const startEdit = (row: EntityLocLookupRow) => {
+    setEditingId(row.id);
+    setEditName(row.name);
+    setEditEntityId(row.entityId ?? '');
+    setEditAddress(row.address ?? '');
+    setEditPhone(row.phone ?? '');
+  };
+
+  const saveEdit = async (id: string) => {
+    await fetch(`/api/locations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editName.trim(), entityId: editEntityId || null, address: editAddress.trim(), phone: editPhone.trim() }),
+    });
+    setEditingId(null);
+    load();
+  };
+
+  const toggleRow = async (row: EntityLocLookupRow) => {
+    await fetch(`/api/locations/${row.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: !row.active }),
+    });
+    load();
+  };
+
+  const deleteRow = async (row: EntityLocLookupRow) => {
     if (!confirm(`Delete location "${row.name}"?`)) return;
-    await fetch(`/api/locations/${row.id}`, { method: 'DELETE' }); load();
+    await fetch(`/api/locations/${row.id}`, { method: 'DELETE' });
+    load();
   };
 
   return (
     <SettingsTile id="entity-locations" icon="🗺️" title="Entity Locations" editMode={editMode}
       description="Clinic locations linked to business entities" open={open} onToggle={onToggle}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-        <select className="form-input" style={{ flex: 1, minWidth: 160, fontSize: 12 }} value={filterEntityId} onChange={(e) => setFilterEntityId(e.target.value)}>
+      {/* Entity filter bar */}
+      <div style={{ marginBottom: 12 }}>
+        <select className="form-input" style={{ fontSize: 12 }} value={filterEntityId} onChange={(e) => setFilterEntityId(e.target.value)}>
           <option value="">All Entities</option>
           {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </select>
-        <button className="btn btn-primary" style={{ fontSize: 12, padding: '4px 14px', flexShrink: 0 }} onClick={openAdd}>+ Add Location</button>
       </div>
-      {loading ? (
-        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>⏳ Loading…</div>
-      ) : rows.length === 0 ? (
-        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>No locations found. Click + Add Location above.</div>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-              {['Name', 'Entity', 'Address', 'Phone', 'Status', 'Actions'].map((h) => (
-                <th key={h} style={thStyle}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.id} style={{ borderBottom: '1px solid #f3f4f6', background: i % 2 === 0 ? '#fff' : '#fafafa', cursor: 'pointer', transition: 'background 0.1s' }}
-                onClick={() => openEdit(row)}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#f0fffe')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafafa')}>
-                <td style={{ ...tdStyle, fontWeight: 600, color: '#111827' }}>{row.name}</td>
-                <td style={{ ...tdStyle, color: '#6b7280' }}>{row.entity?.name ?? '—'}</td>
-                <td style={{ ...tdStyle, color: '#6b7280' }}>{row.address ?? '—'}</td>
-                <td style={tdStyle}>{row.phone ?? '—'}</td>
-                <td style={tdStyle}>
-                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: row.active ? '#dcfce7' : '#f3f4f6', color: row.active ? '#15803d' : '#6b7280' }}>
-                    {row.active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => openEdit(row)}>Edit</button>
-                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: row.active ? '#fff7ed' : '#f0fdf4', color: row.active ? '#c2410c' : '#15803d', border: `1px solid ${row.active ? '#fed7aa' : '#bbf7d0'}` }} onClick={() => toggleActive(row)}>
-                      {row.active ? 'Disable' : 'Enable'}
-                    </button>
-                    <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }} onClick={() => handleDelete(row)}>Del</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-          <div style={{ background: '#fff', width: 480, maxHeight: '90vh', overflowY: 'auto', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{editing ? '✏️ Edit Location' : '📍 Add Location'}</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#6b7280' }}>✕</button>
-            </div>
-            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {formError && <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '8px 12px', borderRadius: 6, fontSize: 13, border: '1px solid #fecaca' }}>{formError}</div>}
-              <div><Label>Location Name <span style={{ color: '#c62828' }}>*</span></Label><input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Main Street Clinic" /></div>
+      <LookupTable
+        rows={rows} loading={loading}
+        extraCol={{ header: 'Entity', render: (r: EntityLocLookupRow) => r.entity?.name ?? '—' }}
+        showAdd={showAdd} onShowAdd={setShowAdd}
+        editingId={editingId}
+        onEdit={startEdit}
+        onToggle={toggleRow}
+        onDelete={deleteRow}
+        addForm={
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div><Label>Name</Label><input className="form-input" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Main Street Clinic" /></div>
               <div>
                 <Label>Entity <span style={{ color: '#c62828' }}>*</span></Label>
-                <select className="form-input" value={form.entityId} onChange={(e) => setForm((f) => ({ ...f, entityId: e.target.value }))}>
+                <select className="form-input" value={addEntityId} onChange={(e) => setAddEntityId(e.target.value)}>
                   <option value="">Select entity…</option>
                   {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
                 </select>
               </div>
-              <div><Label>Address</Label><input className="form-input" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="123 Main St, City, VA" /></div>
-              <div><Label>Phone</Label><input className="form-input" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 000-0000" /></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Label>Active</Label>
-                <div onClick={() => setForm((f) => ({ ...f, active: !f.active }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.active ? '#2ec4b6' : '#d1d5db', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }}>
-                  <div style={{ position: 'absolute', top: 3, left: form.active ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div><Label>Address</Label><input className="form-input" value={addAddress} onChange={(e) => setAddAddress(e.target.value)} placeholder="123 Main St, City, VA" /></div>
+              <div><Label>Phone</Label><input className="form-input" value={addPhone} onChange={(e) => setAddPhone(e.target.value)} placeholder="(555) 000-0000" /></div>
+            </div>
+            <button className="btn btn-teal" style={{ alignSelf: 'flex-start', fontSize: 12 }}
+              onClick={handleAdd} disabled={saving || !addName.trim()}>
+              {saving ? 'Saving…' : '✓ Add Location'}
+            </button>
+          </div>
+        }
+        editForm={
+          editingId ? (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div><Label>Name</Label><input className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+                <div>
+                  <Label>Entity</Label>
+                  <select className="form-input" value={editEntityId} onChange={(e) => setEditEntityId(e.target.value)}>
+                    <option value="">None</option>
+                    {entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                  </select>
                 </div>
-                <span style={{ fontSize: 13, color: '#6b7280' }}>{form.active ? 'Active' : 'Inactive'}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div><Label>Address</Label><input className="form-input" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} /></div>
+                <div><Label>Phone</Label><input className="form-input" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} /></div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-teal" style={{ fontSize: 12 }} onClick={() => saveEdit(editingId)}>Save</button>
+                <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setEditingId(null)}>Cancel</button>
               </div>
             </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Location'}</button>
-            </div>
-          </div>
-        </div>
-      )}
+          ) : null
+        }
+      />
     </SettingsTile>
   );
 }
 
-// ─── TILE 13: Users (super_admin only) ────────────────────────────────────────
+// ─── TILE 14: Users (super_admin only) ────────────────────────────────────────
 
 const ROLE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
   super_admin:    { bg: '#f3e8ff', color: '#7c3aed', label: 'Super Admin' },
