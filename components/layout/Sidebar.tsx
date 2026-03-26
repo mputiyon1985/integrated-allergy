@@ -234,6 +234,27 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
         })}
       </nav>
 
+      {/* Logged-in identity card — above Settings */}
+      {currentUser && (
+        <div style={{ margin: '0 8px 8px', padding: '10px 12px', background: 'linear-gradient(135deg, #e8f9f7, #d0f4ef)', border: '1.5px solid #2ec4b6', borderRadius: 12, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#2ec4b6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>
+                {(currentUser.doctorName ?? currentUser.name ?? '?').charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#0d9488', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentUser.doctorName ?? currentUser.name ?? ''}
+              </div>
+              <div style={{ fontSize: 10, color: '#0f766e', fontWeight: 600 }}>
+                {currentUser.role === 'super_admin' ? '🔑 Super Admin' : currentUser.role}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings — pinned at bottom above footer */}
       <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0', flexShrink: 0 }}>
         <Link
@@ -267,16 +288,7 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
 
       {/* Footer */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', color: '#9ca3af', fontSize: 11, flexShrink: 0 }}>
-        {currentUser && (
-          <>
-            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }}>
-              {currentUser.doctorName ?? currentUser.nurseTitle ?? currentUser.name ?? ''}
-            </div>
-            <div style={{ fontSize: 10, color: '#c8d3e8', marginBottom: 4 }}>
-              {currentUser.role === 'super_admin' ? '🔑 Super Admin' : currentUser.role}
-            </div>
-          </>
-        )}
+
         <div>© 2026 {sidebarSettings.clinic_name}</div>
       </div>
     </>
