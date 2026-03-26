@@ -5,6 +5,11 @@ import Sidebar from '@/components/layout/Sidebar';
 export const metadata: Metadata = {
   title: 'Integrated Allergy IMS',
   description: 'Clinical Allergy Immunotherapy Management System',
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
