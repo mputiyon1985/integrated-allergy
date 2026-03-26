@@ -2,42 +2,16 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
 import TopBar from '@/components/layout/TopBar';
+import { KpiCard } from '@/components/dashboard/KpiCard';
+import type { DashboardStats, KpiDef } from '@/components/dashboard/types';
 
-// SSR-safe dynamic import of react-grid-layout
-const ResponsiveGridLayout = dynamic(
-  () =>
-    import('react-grid-layout').then((mod) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const m = mod as any;
-      const { WidthProvider, Responsive } = m;
-      return WidthProvider(Responsive) as React.ComponentType<any>;
-    }),
+// Dynamically imported so react-grid-layout (and its useContainerWidth hook)
+// only runs on the client — avoids SSR issues.
+const DraggableKpiGrid = dynamic(
+  () => import('@/components/dashboard/DraggableKpiGrid'),
   { ssr: false }
 );
-
-interface DashboardStats {
-  totalPatients: number;
-  activeTreatments: number;
-  vialsExpiringSoon: number;
-  dosesThisWeek: number;
-  shotsToday: number;
-  testsToday: number;
-  evalsToday: number;
-  activeDoctors: number;
-  activeNurses: number;
-}
-
-interface ActivityItem {
-  id: string;
-  timestamp: string;
-  type: string;
-  patient: string;
-  details: string;
-  user: string;
-}
 
 const MOCK_STATS: DashboardStats = {
   totalPatients: 0,
@@ -125,18 +99,6 @@ function saveLayout(layouts: object) {
   } catch {}
 }
 
-// --- KPI tile definitions ---
-interface KpiDef {
-  id: string;
-  label: string;
-  icon: string;
-  getValue: (s: DashboardStats) => number;
-  sub: string;
-  color: string;
-  danger?: (s: DashboardStats) => boolean;
-  note?: (s: DashboardStats) => string | undefined;
-}
-
 const KPI_DEFS: KpiDef[] = [
   {
     id: 'patients',
@@ -215,16 +177,26 @@ const KPI_DEFS: KpiDef[] = [
   },
 ];
 
+interface ActivityItem {
+  id: string;
+  timestamp: string;
+  type: string;
+  patient: string;
+  details: string;
+  user: string;
+}
+
 export default function DashboardPage() {
   const [stats, setStats]       = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [layouts, setLayouts]   = useState<object>(DEFAULT_LAYOUT);
+  const [mounted, setMounted]   = useState(false);
 
-  // Load persisted layout on mount (client only)
   useEffect(() => {
     setLayouts(loadLayout());
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -247,7 +219,7 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  const handleLayoutChange = useCallback((_layout: any, allLayouts: object) => {
+  const handleLayoutChange = useCallback((_layout: unknown, allLayouts: object) => {
     setLayouts(allLayouts);
     saveLayout(allLayouts);
   }, []);
@@ -328,7 +300,7 @@ export default function DashboardPage() {
                   gap: 8,
                 }}
               >
-                <span>⠿</span>
+                <span style={{ fontSize: 18 }}>⠿</span>
                 <span>
                   <strong>Edit mode active</strong> — drag tiles to rearrange, resize from the
                   bottom-right corner. Layout saves automatically.
@@ -336,48 +308,51 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Draggable KPI grid */}
+            {/* Draggable KPI grid (client-only) */}
             <div style={{ marginBottom: 24 }}>
-              <ResponsiveGridLayout
-                className="layout"
-                layouts={layouts}
-                onLayoutChange={handleLayoutChange}
-                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                cols={{ lg: 8, md: 6, sm: 4, xs: 2, xxs: 2 }}
-                rowHeight={40}
-                isDraggable={editMode}
-                isResizable={editMode}
-                margin={[16, 16]}
-                containerPadding={[0, 0]}
-              >
-                {KPI_DEFS.map((def) => {
-                  const value = def.getValue(stats);
-                  const isDanger = def.danger ? def.danger(stats) : false;
-                  const note = def.note ? def.note(stats) : undefined;
-                  const valueColor = isDanger
-                    ? value > 3
-                      ? '#c62828'
-                      : '#f57c00'
-                    : def.color;
-
-                  return (
-                    <div key={def.id}>
-                      <KpiCard
-                        label={def.label}
-                        icon={def.icon}
-                        value={value}
-                        sub={def.sub}
-                        note={note}
-                        valueColor={valueColor}
-                        editMode={editMode}
-                      />
-                    </div>
-                  );
-                })}
-              </ResponsiveGridLayout>
+              {mounted ? (
+                <DraggableKpiGrid
+                  stats={stats}
+                  kpiDefs={KPI_DEFS}
+                  layouts={layouts}
+                  editMode={editMode}
+                  onLayoutChange={handleLayoutChange}
+                />
+              ) : (
+                /* SSR / pre-mount: plain static grid */
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: 16,
+                  }}
+                >
+                  {KPI_DEFS.map((def) => {
+                    const value      = def.getValue(stats);
+                    const isDanger   = def.danger ? def.danger(stats) : false;
+                    const note       = def.note ? def.note(stats) : undefined;
+                    const valueColor = isDanger
+                      ? value > 3 ? '#c62828' : '#f57c00'
+                      : def.color;
+                    return (
+                      <div key={def.id} style={{ height: 130 }}>
+                        <KpiCard
+                          label={def.label}
+                          icon={def.icon}
+                          value={value}
+                          sub={def.sub}
+                          note={note}
+                          valueColor={valueColor}
+                          editMode={false}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Recent Activity — not draggable */}
+            {/* Recent Activity — stays below grid, not draggable */}
             <div className="card" style={{ padding: 0 }}>
               <div
                 style={{
@@ -451,98 +426,5 @@ export default function DashboardPage() {
         )}
       </div>
     </>
-  );
-}
-
-interface KpiCardProps {
-  label: string;
-  icon: string;
-  value: number;
-  sub: string;
-  note?: string;
-  valueColor: string;
-  editMode: boolean;
-}
-
-function KpiCard({ label, icon, value, sub, note, valueColor, editMode }: KpiCardProps) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: '#ffffff',
-        borderRadius: 12,
-        boxShadow: hovered
-          ? '0 4px 16px rgba(0,0,0,0.12)'
-          : '0 2px 8px rgba(0,0,0,0.08)',
-        border: editMode ? '2px solid #F59E0B' : '1px solid #e5e7eb',
-        padding: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        gap: 6,
-        height: '100%',
-        position: 'relative',
-        transition: 'box-shadow 0.15s, border-color 0.15s',
-        cursor: editMode ? 'grab' : 'default',
-        userSelect: 'none',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Drag handle — visible in edit mode */}
-      {editMode && (
-        <span
-          style={{
-            position: 'absolute',
-            top: 8,
-            left: 10,
-            fontSize: 16,
-            color: '#F59E0B',
-            lineHeight: 1,
-            cursor: 'grab',
-          }}
-        >
-          ⠿
-        </span>
-      )}
-
-      {/* Icon */}
-      <div style={{ fontSize: 24, lineHeight: 1, marginBottom: 2 }}>{icon}</div>
-
-      {/* Label */}
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          color: '#6b7280',
-        }}
-      >
-        {label}
-      </div>
-
-      {/* Value */}
-      <div
-        style={{
-          fontSize: 32,
-          fontWeight: 800,
-          color: valueColor,
-          lineHeight: 1.1,
-        }}
-      >
-        {value}
-      </div>
-
-      {/* Sub + note */}
-      <div style={{ fontSize: 11, color: '#9ca3af' }}>
-        {sub}
-        {note && (
-          <span style={{ marginLeft: 4, fontStyle: 'italic' }}>({note})</span>
-        )}
-      </div>
-    </div>
   );
 }
