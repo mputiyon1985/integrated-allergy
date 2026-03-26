@@ -821,10 +821,11 @@ export default function PatientDetailPage() {
                     <div
                       key={a.id}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 3, padding: '1px 2px', borderRadius: 3,
+                        padding: '2px 4px', borderRadius: 4,
                         background: isChecked ? '#e8f9f7' : 'transparent',
                         marginBottom: 2, cursor: 'pointer',
                         transition: 'background 0.15s',
+                        border: isChecked ? '1px solid #a7f3d0' : '1px solid transparent',
                       }}
                       onClick={() => {
                         setGridChecked((prev) => {
@@ -836,16 +837,18 @@ export default function PatientDetailPage() {
                         setGridSaveMsg(null);
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ width: 12, height: 12, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
-                      />
-                      <span style={{ flex: 1, fontSize: 10, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ width: 11, height: 11, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
+                        />
+                        <span style={{ fontSize: 10, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.3 }}>{a.name}</span>
+                      </div>
                       {isChecked && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2, paddingLeft: 14 }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="number"
                             value={gridChecked[a.id]}
@@ -856,9 +859,9 @@ export default function PatientDetailPage() {
                               setGridChecked((prev) => ({ ...prev, [a.id]: val }));
                               setGridSaveMsg(null);
                             }}
-                            style={{ width: 40, padding: '1px 3px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 10, textAlign: 'right', background: '#f0fdfa' }}
+                            style={{ width: 44, padding: '1px 4px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 10, textAlign: 'right', background: '#fff' }}
                           />
-                          <span style={{ fontSize: 10, color: '#6b7280' }}>mL</span>
+                          <span style={{ fontSize: 10, color: '#0d9488', fontWeight: 600 }}>mL</span>
                         </div>
                       )}
                     </div>
