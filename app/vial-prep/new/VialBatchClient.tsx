@@ -442,7 +442,7 @@ export default function NewVialBatchPage() {
         {/* ── STEP 2: Allergen Mix (inline grid) ── */}
         {step === 2 && (() => {
           // Group allergen library by type, sorted alphabetically
-          const typeOrder = ['Pollen', 'Mold', 'Dust', 'Animals', 'Insects', 'Foods', 'Other'];
+          const typeOrder = ['Foods', 'Insects', 'Pollen', 'Mold', 'Dust', 'Animals', 'Other'];
           const groups: Record<string, typeof allergenOptions> = {};
           allergenOptions.forEach((a) => {
             const key = a.type || 'Other';
@@ -603,10 +603,8 @@ export default function NewVialBatchPage() {
                 {allergenOptions.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-                    <div>{col1.map(renderGroup)}</div>
-                    <div>{col2.map(renderGroup)}</div>
-                    <div>{col3.map(renderGroup)}</div>
+                  <div style={{ columns: '130px auto', columnGap: 8, maxHeight: '320px', overflow: 'auto' }}>
+                    {sortedGroupKeys.map(renderGroup)}
                   </div>
                 )}
               </div>
