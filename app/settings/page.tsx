@@ -245,6 +245,8 @@ interface UserRow {
   active: boolean;
   mfaEnabled: boolean;
   createdAt: string;
+  doctorId: string | null;
+  nurseId: string | null;
 }
 
 // ─── Lookup table component (for Locations, Diagnoses, Titles) ────────────────
@@ -1704,7 +1706,7 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
 
   const openEdit = (user: UserRow) => {
     setEditing(user);
-    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active, doctorId: (user as any).doctorId ?? '', nurseId: (user as any).nurseId ?? '' });
+    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active, doctorId: user.doctorId ?? '', nurseId: user.nurseId ?? '' });
     setImportValue(''); setFormError(null); setShowModal(true);
   };
 
