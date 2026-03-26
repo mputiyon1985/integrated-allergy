@@ -451,10 +451,7 @@ export default function SettingsPage() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%' }}>
             {tiles.map(tile => (
-              <div key={tile.id} style={{
-                gridColumn: openTile === tile.id ? '1 / -1' : 'auto',
-                width: '100%'
-              }}>
+              <div key={tile.id} style={{ width: '100%' }}>
                 {tile.node}
               </div>
             ))}
