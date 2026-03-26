@@ -709,7 +709,7 @@ export default function PatientDetailPage() {
         {/* ── Tab 1: Allergen Mix (inline grid) ── */}
         {activeTab === 1 && (() => {
           // Group allergen library by type, sorted alphabetically
-          const typeOrder = ['Pollen', 'Mold', 'Dust', 'Animals', 'Insects', 'Foods', 'Other'];
+          const typeOrder = ['Foods', 'Insects', 'Pollen', 'Mold', 'Dust', 'Animals', 'Other'];
           const groups: Record<string, typeof allergenOptions> = {};
           allergenOptions.forEach((a) => {
             const key = a.type || 'Other';
