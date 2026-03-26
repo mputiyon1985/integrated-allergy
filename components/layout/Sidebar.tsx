@@ -124,7 +124,11 @@ const DEFAULTS: SidebarSettings = {
   version_label: 'IMS v2.0 · © 2026',
 };
 
-export default function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export default function Sidebar({ onClose }: SidebarProps = {}) {
   const pathname = usePathname();
   const [sidebarSettings, setSidebarSettings] = useState<SidebarSettings>(DEFAULTS);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -156,20 +160,41 @@ export default function Sidebar() {
   const settingsActive = isActive('/settings');
 
   return (
-    <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+    <>
       {/* Clinic branding */}
-      <div style={{ padding: '10px 0 10px 8px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
-        <Image
-          src="/integrated-allergy-logo.jpg"
-          alt={sidebarSettings.clinic_name}
-          width={160}
-          height={55}
-          style={{ height: 55, width: 'auto', display: 'block' }}
-          priority
-        />
-        <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 8, paddingLeft: 2 }}>
-          {sidebarSettings.version_label}
+      <div style={{ padding: '10px 0 10px 8px', borderBottom: '1px solid #e5e7eb', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <Image
+            src="/integrated-allergy-logo.jpg"
+            alt={sidebarSettings.clinic_name}
+            width={160}
+            height={55}
+            style={{ height: 55, width: 'auto', display: 'block' }}
+            priority
+          />
+          <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 8, paddingLeft: 2 }}>
+            {sidebarSettings.version_label}
+          </div>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="mobile-close-btn"
+            aria-label="Close menu"
+            style={{
+              display: 'none',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#6b7280',
+              padding: '4px 8px',
+              fontSize: 20,
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -198,6 +223,7 @@ export default function Sidebar() {
               }}
               onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = '#e8f9f7'; }}
               onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
+              onClick={onClose}
             >
               <span style={{ opacity: active ? 1 : 0.7 }}>{item.icon}</span>
               {item.label}
@@ -227,6 +253,7 @@ export default function Sidebar() {
           }}
           onMouseEnter={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = '#f3f4f6'; }}
           onMouseLeave={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
+          onClick={onClose}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: settingsActive ? 1 : 0.7 }}>
             <circle cx="12" cy="12" r="3" />
@@ -241,6 +268,6 @@ export default function Sidebar() {
         <div>© 2026 {sidebarSettings.clinic_name}</div>
         <div style={{ marginTop: 2 }}>Clinical IMS Platform</div>
       </div>
-    </aside>
+    </>
   );
 }

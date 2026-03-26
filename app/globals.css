@@ -444,3 +444,93 @@ textarea.form-input {
 .card {
   border-radius: 14px;
 }
+
+/* ─── Mobile Responsive ─────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Sidebar hidden by default on mobile */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 200;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Main layout takes full width */
+  .main-layout {
+    margin-left: 0 !important;
+  }
+
+  /* Topbar — add hamburger button space */
+  .topbar {
+    padding: 0 12px;
+  }
+
+  /* Page content — less padding on mobile */
+  .page-content {
+    padding: 12px;
+  }
+
+  /* Tables — horizontal scroll */
+  .clinical-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Cards — full width */
+  .card {
+    margin-bottom: 12px;
+  }
+
+  /* KPI grid — 2 cols on mobile */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Forms — single column */
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Buttons — full width on mobile forms */
+  .btn-full-mobile {
+    width: 100%;
+  }
+
+  /* Modals — full screen on mobile */
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+
+  .modal-content {
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 90vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Hamburger button - shown on mobile */
+  .mobile-menu-btn {
+    display: block !important;
+  }
+
+  /* Close button in sidebar - shown on mobile */
+  .mobile-close-btn {
+    display: block !important;
+  }
+
+  /* Search bar - full width on mobile */
+  .search-input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .search-bar {
+    flex: 1;
+    min-width: 0;
+  }
+}

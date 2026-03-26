@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTopBarContext } from './TopBarContext';
 
 interface BreadcrumbItem {
   label: string;
@@ -11,38 +12,62 @@ interface TopBarProps {
   title: string;
   breadcrumbs?: BreadcrumbItem[];
   actions?: React.ReactNode;
+  onMenuClick?: () => void;
 }
 
-export default function TopBar({ title, breadcrumbs, actions }: TopBarProps) {
+export default function TopBar({ title, breadcrumbs, actions, onMenuClick }: TopBarProps) {
+  const ctx = useTopBarContext();
+  const handleMenu = onMenuClick ?? ctx.onMenuClick;
+
   return (
     <header className="topbar">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>
-            {breadcrumbs.map((bc, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <span style={{ color: 'rgba(255,255,255,0.6)' }}>›</span>}
-                {bc.href ? (
-                  <a href={bc.href} style={{ color: '#fff', textDecoration: 'none', opacity: 0.9 }}>
-                    {bc.label}
-                  </a>
-                ) : (
-                  <span>{bc.label}</span>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        )}
-        <h1
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={handleMenu}
+          className="mobile-menu-btn"
+          aria-label="Open menu"
           style={{
-            fontSize: 16,
-            fontWeight: 700,
-            color: '#ffffff',
-            letterSpacing: '-0.01em',
+            display: 'none',
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            padding: 4,
+            fontSize: 22,
+            lineHeight: 1,
           }}
         >
-          {title}
-        </h1>
+          ☰
+        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {breadcrumbs && breadcrumbs.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>
+              {breadcrumbs.map((bc, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span style={{ color: 'rgba(255,255,255,0.6)' }}>›</span>}
+                  {bc.href ? (
+                    <a href={bc.href} style={{ color: '#fff', textDecoration: 'none', opacity: 0.9 }}>
+                      {bc.label}
+                    </a>
+                  ) : (
+                    <span>{bc.label}</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+          <h1
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: '#ffffff',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {title}
+          </h1>
+        </div>
       </div>
       {actions && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
