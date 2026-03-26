@@ -128,3 +128,16 @@ model Appointment {
 
   patient     Patient  @relation(fields: [patientId], references: [id])
 }
+
+model Nurse {
+  id             String   @id @default(cuid())
+  name           String
+  title          String   @default("RN")
+  email          String?
+  phone          String?
+  clinicLocation String?
+  npi            String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

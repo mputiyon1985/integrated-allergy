@@ -91,6 +91,7 @@ export default function CalendarPage() {
   const [appointments, setAppointments]   = useState<Appointment[]>([]);
   const [patients, setPatients]           = useState<Patient[]>([]);
   const [doctors, setDoctors]               = useState<Array<{id: string; name: string; title: string}>>([]);
+  const [nurses, setNurses]                 = useState<Array<{id: string; name: string; title: string}>>([]);
   const [loading, setLoading]             = useState(true);
 
   // Modal state
@@ -128,6 +129,14 @@ export default function CalendarPage() {
     fetch('/api/doctors?active=true')
       .then((r) => r.json())
       .then((d) => setDoctors(d.doctors ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Load nurses
+  useEffect(() => {
+    fetch('/api/nurses?active=true')
+      .then((r) => r.json())
+      .then((d) => setNurses(d.nurses ?? []))
       .catch(() => {});
   }, []);
 
@@ -410,10 +419,19 @@ export default function CalendarPage() {
                 <label className="form-label">Provider / Staff</label>
                 <select className="form-input" value={form.provider} onChange={(e) => setField('provider', e.target.value)}>
                   <option value="">Select provider…</option>
-                  {doctors.length > 0
-                    ? doctors.map((d) => <option key={d.id} value={`${d.title} ${d.name}`}>{d.title} {d.name}</option>)
-                    : <option disabled>No active doctors — add one first</option>
-                  }
+                  {doctors.length === 0 && nurses.length === 0 && (
+                    <option disabled>No active staff — add doctors or nurses first</option>
+                  )}
+                  {doctors.length > 0 && (
+                    <optgroup label="Doctors">
+                      {doctors.map((d) => <option key={d.id} value={`${d.title} ${d.name}`}>{d.title} {d.name}</option>)}
+                    </optgroup>
+                  )}
+                  {nurses.length > 0 && (
+                    <optgroup label="Nurses">
+                      {nurses.map((n) => <option key={n.id} value={`${n.title} ${n.name}`}>{n.title} {n.name}</option>)}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 

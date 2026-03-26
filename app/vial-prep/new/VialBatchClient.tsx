@@ -84,6 +84,9 @@ export default function NewVialBatchPage() {
   const [patients, setPatients]     = useState<Patient[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
 
+  // Nurses
+  const [nurses, setNurses] = useState<Array<{id: string; name: string; title: string}>>([]);
+
   // Step 1
   const [patientId, setPatientId]   = useState(prePatientId);
   const [batchName, setBatchName]   = useState('');
@@ -118,6 +121,14 @@ export default function NewVialBatchPage() {
       })
       .catch(() => {});
   }, [prePatientId]);
+
+  // ── Load nurses ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/nurses?active=true')
+      .then((r) => r.json())
+      .then((d) => setNurses(d.nurses ?? []))
+      .catch(() => {});
+  }, []);
 
   // ── Load allergens ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -349,11 +360,35 @@ export default function NewVialBatchPage() {
               </div>
               <div>
                 <label className="form-label">Prepared By <span style={{ color: '#c62828' }}>*</span></label>
-                <input type="text" className="form-input" placeholder="Nurse / pharmacist name" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} />
+                {nurses.length > 0 ? (
+                  <select className="form-input" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)}>
+                    <option value="">Select nurse…</option>
+                    {nurses.map((n) => (
+                      <option key={n.id} value={`${n.title} ${n.name}`}>{n.title} {n.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <>
+                    <input type="text" className="form-input" placeholder="Nurse / pharmacist name" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} />
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>No nurses on file — <a href="/nurses" style={{ color: '#0055a5' }}>add nurses first</a> or type name above</div>
+                  </>
+                )}
               </div>
               <div>
                 <label className="form-label">Verified By</label>
-                <input type="text" className="form-input" placeholder="Second-check staff name" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} />
+                {nurses.length > 0 ? (
+                  <select className="form-input" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)}>
+                    <option value="">Select nurse… (recommended: different from Prepared By)</option>
+                    {nurses.map((n) => (
+                      <option key={n.id} value={`${n.title} ${n.name}`}>{n.title} {n.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <>
+                    <input type="text" className="form-input" placeholder="Second-check staff name" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} />
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>No nurses on file — <a href="/nurses" style={{ color: '#0055a5' }}>add nurses first</a> or type name above</div>
+                  </>
+                )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label className="form-label">Notes</label>
