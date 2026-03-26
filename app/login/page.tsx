@@ -135,12 +135,12 @@ export default function LoginPage() {
           </div>
 
           {/* Body */}
-          <div className="px-8 py-8">
+          <div className="px-8 py-8" style={{ padding: "24px 32px" }}>
             {/* Step: Credentials */}
             {step === 'credentials' && (
               <>
                 <h2 className="text-gray-800 text-lg font-semibold mb-6 text-center">Sign in to your account</h2>
-                <form onSubmit={handleCredentials} className="space-y-4">
+                <form onSubmit={handleCredentials} className="space-y-4" style={{ padding: "0 4px" }}>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
                     <input
