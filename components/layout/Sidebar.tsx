@@ -122,13 +122,13 @@ export default function Sidebar() {
       <div style={{ padding: '12px 8px 12px 8px', borderBottom: '1px solid #2d3f5e' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <img
-            src="/integrated-allergy-logo.png"
+            src="/integrated-allergy-logo.jpg"
             alt="Integrated Allergy"
             style={{
-              width: 173,
-              height: 75,
+              width: 'auto',
+              height: 60,
               display: 'block',
-              filter: 'brightness(0) invert(1)',
+              objectFit: 'contain',
             }}
           />
           <div style={{ color: '#8a9bbf', fontSize: 10 }}>IMS v2.0 · © 2026</div>
