@@ -125,7 +125,7 @@ export default function Sidebar() {
           alt="Integrated Allergy"
           style={{ height: 55, width: 'auto', display: 'block' }}
         />
-        <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 4, paddingLeft: 2 }}>IMS v2.0 · © 2026</div>
+        <div style={{ color: '#9ca3af', fontSize: 10, marginTop: 8, paddingLeft: 2 }}>IMS v2.0 · © 2026</div>
       </div>
 
       {/* Navigation */}
