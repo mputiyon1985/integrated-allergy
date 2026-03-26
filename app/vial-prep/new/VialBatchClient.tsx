@@ -608,7 +608,7 @@ export default function NewVialBatchPage() {
                     <div style={{ paddingRight: 14, borderRight: '1px solid #e5e7eb' }}>{col1.map(renderGroup)}</div>
                     <div style={{ padding: '0 14px', borderRight: '1px solid #e5e7eb' }}>{col2.map(renderGroup)}</div>
                     <div style={{ padding: '0 14px', borderRight: '1px solid #e5e7eb' }}>{col3.map(renderGroup)}</div>
-                    <div style={{ paddingLeft: 14 }}>{col4.map(renderGroup)}</div>
+                    
                   </div>
                 )}
               </div>
