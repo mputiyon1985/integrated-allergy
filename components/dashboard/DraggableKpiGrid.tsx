@@ -57,6 +57,7 @@ export default function DraggableKpiGrid({
                   note={note}
                   valueColor={valueColor}
                   editMode={editMode}
+                  href={def.href}
                 />
               </div>
             );

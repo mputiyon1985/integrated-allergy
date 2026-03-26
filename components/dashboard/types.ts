@@ -11,6 +11,7 @@ export interface DashboardStats {
 }
 
 export interface KpiDef {
+  href?: string;
   id: string;
   label: string;
   icon: string;

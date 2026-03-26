@@ -102,6 +102,7 @@ function saveLayout(layouts: object) {
 const KPI_DEFS: KpiDef[] = [
   {
     id: 'patients',
+    href: '/patients',
     label: 'Total Patients',
     icon: '🧑‍🤝‍🧑',
     getValue: (s) => s.totalPatients,
@@ -110,6 +111,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'active',
+    href: '/patients',
     label: 'Active Treatments',
     icon: '💉',
     getValue: (s) => s.activeTreatments,
@@ -118,6 +120,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'expiring',
+    href: '/vial-prep',
     label: 'Vials Due to Expire',
     icon: '⚠️',
     getValue: (s) => s.vialsExpiringSoon,
@@ -127,6 +130,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'doses',
+    href: '/dosing',
     label: 'Doses This Week',
     icon: '📅',
     getValue: (s) => s.dosesThisWeek,
@@ -135,6 +139,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'shots',
+    href: '/calendar',
     label: 'Shots Today',
     icon: '🩺',
     getValue: (s) => s.shotsToday,
@@ -143,6 +148,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'tests',
+    href: '/calendar',
     label: 'Tests Today',
     icon: '🔬',
     getValue: (s) => s.testsToday,
@@ -152,6 +158,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'evals',
+    href: '/calendar',
     label: 'Evals Today',
     icon: '📋',
     getValue: (s) => s.evalsToday,
@@ -161,6 +168,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'doctors',
+    href: '/doctors',
     label: '# of Doctors',
     icon: '👨‍⚕️',
     getValue: (s) => s.activeDoctors,
@@ -169,6 +177,7 @@ const KPI_DEFS: KpiDef[] = [
   },
   {
     id: 'nurses',
+    href: '/nurses',
     label: '# of Nurses',
     icon: '👩‍⚕️',
     getValue: (s) => s.activeNurses,
