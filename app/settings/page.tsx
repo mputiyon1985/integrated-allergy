@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import TopBar from '@/components/layout/TopBar';
@@ -943,7 +943,8 @@ function LocationsTile({ open, onToggle, editMode }: { open: boolean; onToggle: 
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -1046,7 +1047,8 @@ function DiagnosesTile({ open, onToggle, editMode }: { open: boolean; onToggle: 
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -1141,7 +1143,8 @@ function DoctorTitlesTile({ open, onToggle, editMode }: { open: boolean; onToggl
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -1226,7 +1229,8 @@ function NurseTitlesTile({ open, onToggle, editMode }: { open: boolean; onToggle
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -1327,7 +1331,8 @@ function AllergensTile({ open, onToggle, editMode }: { open: boolean; onToggle: 
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -1479,7 +1484,8 @@ function EntitiesTile({ open, onToggle, editMode }: { open: boolean; onToggle: (
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const openAdd = () => {
     setEditing(null);
@@ -1676,7 +1682,8 @@ function EntityLocationsTile({ open, onToggle, editMode }: { open: boolean; onTo
   }, [filterEntityId]);
 
   useEffect(() => { if (open) { loadEntities(); } }, [open, loadEntities]);
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
@@ -2194,7 +2201,8 @@ function AuditLogTile({ open, onToggle, editMode }: { open: boolean; onToggle: (
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (open) load(); }, [open, load]);
+  const loadedRef = React.useRef(false);
+  useEffect(() => { if (open && !loadedRef.current) { loadedRef.current = true; load(); } }, [open, load]);
 
   const handleExportCsv = async () => {
     setExporting(true);
