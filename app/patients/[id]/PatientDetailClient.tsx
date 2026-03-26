@@ -16,8 +16,11 @@ interface PatientDetail {
   patientId: string;
   firstName: string;
   lastName: string;
+  name: string;
   dob: string;
   physician: string;
+  physicianRaw?: string;
+  doctorId?: string;
   clinicLocation: string;
   diagnosis: string;
   startDate: string;
@@ -27,6 +30,23 @@ interface PatientDetail {
   insuranceId?: string;
   notes?: string;
 }
+
+interface DoctorOption {
+  id: string;
+  name: string;
+  title: string;
+  active: boolean;
+}
+
+const LOCATIONS = ['Main Clinic — Dumfries, VA', 'North Branch — Woodbridge, VA', 'South Branch — Stafford, VA'];
+const DIAGNOSES = [
+  'Allergic Rhinitis',
+  'Asthma',
+  'Asthma + Allergic Rhinitis',
+  'Allergic Rhinitis + Eczema',
+  'AR + Asthma + Eczema',
+  'Other',
+];
 
 interface AllergenMixItem {
   id: string;
@@ -107,6 +127,17 @@ export default function PatientDetailPage() {
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState(tabParam ? parseInt(tabParam) : 0);
   const [alerts, setAlerts]       = useState<{ level: 'warning' | 'danger'; message: string; detail?: string }[]>([]);
+
+  // Edit patient modal state
+  const [showEditModal, setShowEditModal]     = useState(false);
+  const [editForm, setEditForm]               = useState<{
+    firstName: string; lastName: string; dob: string; phone: string; email: string;
+    insuranceId: string; doctorId: string; physician: string; clinicLocation: string;
+    diagnosis: string; startDate: string; notes: string;
+  }>({ firstName: '', lastName: '', dob: '', phone: '', email: '', insuranceId: '', doctorId: '', physician: '', clinicLocation: '', diagnosis: '', startDate: '', notes: '' });
+  const [editSaving, setEditSaving]           = useState(false);
+  const [editError, setEditError]             = useState<string | null>(null);
+  const [doctorOptions, setDoctorOptions]     = useState<DoctorOption[]>([]);
 
   // Allergen add form
   const [showAddAllergen, setShowAddAllergen] = useState(false);
@@ -307,6 +338,89 @@ export default function PatientDetailPage() {
     }
   };
 
+  // ── Open edit modal ─────────────────────────────────────────────────────────
+  const openEditModal = () => {
+    if (!patient) return;
+    setEditForm({
+      firstName:     patient.firstName,
+      lastName:      patient.lastName,
+      dob:           patient.dob,
+      phone:         patient.phone ?? '',
+      email:         patient.email ?? '',
+      insuranceId:   patient.insuranceId ?? '',
+      doctorId:      patient.doctorId ?? '',
+      physician:     patient.physicianRaw ?? patient.physician,
+      clinicLocation: patient.clinicLocation ?? '',
+      diagnosis:     patient.diagnosis ?? '',
+      startDate:     patient.startDate ?? '',
+      notes:         patient.notes ?? '',
+    });
+    setEditError(null);
+    setShowEditModal(true);
+    // Load doctors if not yet loaded
+    if (doctorOptions.length === 0) {
+      fetch('/api/doctors?active=true')
+        .then((r) => r.json())
+        .then((d) => setDoctorOptions(d.doctors ?? []))
+        .catch(() => {});
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!patient) return;
+    setEditError(null);
+    // Validation
+    if (!editForm.firstName.trim() || !editForm.lastName.trim()) {
+      setEditError('First name and last name are required.');
+      return;
+    }
+    if (!editForm.dob) {
+      setEditError('Date of birth is required.');
+      return;
+    }
+    if (!editForm.physician.trim()) {
+      setEditError('Physician is required.');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const name = `${editForm.lastName.trim()}, ${editForm.firstName.trim()}`;
+      const res = await fetch(`/api/patients/${patientDbId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          dob:           editForm.dob,
+          physician:     editForm.physician,
+          doctorId:      editForm.doctorId || undefined,
+          clinicLocation: editForm.clinicLocation,
+          diagnosis:     editForm.diagnosis,
+          startDate:     editForm.startDate || undefined,
+          phone:         editForm.phone,
+          email:         editForm.email,
+          insuranceId:   editForm.insuranceId,
+          notes:         editForm.notes,
+        }),
+      });
+      if (res.ok) {
+        setShowEditModal(false);
+        // Refresh patient data
+        const pRes = await fetch(`/api/patients/${patientDbId}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          setPatient(pData.patient ?? null);
+        }
+      } else {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setEditError(data.error ?? 'Failed to save. Please try again.');
+      }
+    } catch {
+      setEditError('Network error. Please try again.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   // ── Loading / not found ─────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -384,55 +498,79 @@ export default function PatientDetailPage() {
 
         {/* ── Tab 0: Patient Info ── */}
         {activeTab === 0 && (
-          <div className="card">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="card" style={{ borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', padding: 24 }}>
+            {/* Header row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#111827', margin: 0 }}>Patient Information</h3>
+              <button
+                className="btn btn-teal btn-sm"
+                onClick={openEditModal}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+              >
+                <span>✏️</span> Edit Patient
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              {/* Personal column */}
               <div>
-                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 12 }}>Personal Information</h4>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9ca3af', marginBottom: 12, padding: '5px 10px', background: '#f3f4f6', borderRadius: 6 }}>
+                  Personal Information
+                </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <tbody>
                     {([
-                      ['First Name', patient.firstName],
-                      ['Last Name', patient.lastName],
+                      ['First Name',    patient.firstName],
+                      ['Last Name',     patient.lastName],
                       ['Date of Birth', patient.dob],
-                      ['Patient ID', patient.patientId],
-                      ['Phone', patient.phone || '—'],
-                      ['Email', patient.email || '—'],
-                      ['Insurance ID', patient.insuranceId || '—'],
+                      ['Patient ID',    patient.patientId],
+                      ['Phone',         patient.phone || '—'],
+                      ['Email',         patient.email || '—'],
+                      ['Insurance ID',  patient.insuranceId || '—'],
                     ] as [string, string][]).map(([label, value]) => (
-                      <tr key={label} style={{ borderBottom: '1px solid #f0f2f5' }}>
-                        <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: 600, fontSize: 12, width: 140 }}>{label}</td>
-                        <td style={{ padding: '6px 0' }}>{value}</td>
+                      <tr key={label} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '8px 4px 8px 0', color: '#9ca3af', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', width: 130, verticalAlign: 'top' }}>{label}</td>
+                        <td style={{ padding: '8px 0', color: '#111827', fontWeight: 500 }}>{value}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              {/* Clinical column */}
               <div>
-                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 12 }}>Clinical Details</h4>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9ca3af', marginBottom: 12, padding: '5px 10px', background: '#f3f4f6', borderRadius: 6 }}>
+                  Clinical Details
+                </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <tbody>
                     {([
-                      ['Physician', patient.physician],
+                      ['Physician',       patient.physician],
                       ['Clinic Location', patient.clinicLocation || '—'],
-                      ['Diagnosis', patient.diagnosis],
+                      ['Diagnosis',       patient.diagnosis],
                       ['Treatment Start', patient.startDate || '—'],
-                      ['Current Status', patient.status],
+                      ['Current Status',  patient.status],
                     ] as [string, string][]).map(([label, value]) => (
-                      <tr key={label} style={{ borderBottom: '1px solid #f0f2f5' }}>
-                        <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: 600, fontSize: 12, width: 140 }}>{label}</td>
-                        <td style={{ padding: '6px 0' }}>
+                      <tr key={label} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '8px 4px 8px 0', color: '#9ca3af', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', width: 130, verticalAlign: 'top' }}>{label}</td>
+                        <td style={{ padding: '8px 0' }}>
                           {label === 'Current Status'
                             ? <span className={statusClass[value] || 'badge badge-inactive'}>{value}</span>
-                            : value}
+                            : <span style={{ color: '#111827', fontWeight: 500 }}>{value}</span>}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+
                 {patient.notes && (
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Notes</div>
-                    <div style={{ fontSize: 13, color: '#374151', background: '#f9fafb', padding: '8px 10px', border: '1px solid #e5e7eb' }}>{patient.notes}</div>
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9ca3af', marginBottom: 8, padding: '5px 10px', background: '#f3f4f6', borderRadius: 6 }}>
+                      Notes
+                    </div>
+                    <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, background: '#f9fafb', padding: '10px 12px', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                      {patient.notes}
+                    </div>
                   </div>
                 )}
               </div>
@@ -475,6 +613,204 @@ export default function PatientDetailPage() {
                   </tbody>
                 </table>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Edit Patient Modal ── */}
+        {showEditModal && (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(2px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}
+          >
+            <div style={{ background: '#fff', width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+
+              {/* Modal header */}
+              <div style={{ padding: '16px 24px', background: 'linear-gradient(135deg, #0055a5 0%, #0077cc 100%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>✏️ Edit Patient</div>
+                  <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 }}>{patient.name}</div>
+                </div>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, lineHeight: 1 }}
+                >×</button>
+              </div>
+
+              {/* Error banner */}
+              {editError && (
+                <div style={{ padding: '10px 24px', background: '#fef2f2', color: '#b91c1c', fontSize: 13, borderBottom: '1px solid #fecaca', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>⚠️</span> {editError}
+                </div>
+              )}
+
+              {/* Scrollable body */}
+              <div style={{ overflowY: 'auto', flex: 1, padding: '20px 24px' }}>
+
+                {/* Personal Info section */}
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#6b7280', marginBottom: 14, padding: '6px 12px', background: '#f3f4f6', borderRadius: 8 }}>
+                  Personal Information
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+                  <div>
+                    <label className="form-label">First Name <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editForm.firstName}
+                      onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Last Name <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editForm.lastName}
+                      onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                      placeholder="Last name"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Date of Birth <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={editForm.dob}
+                      onChange={(e) => setEditForm((f) => ({ ...f, dob: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Phone</label>
+                    <input
+                      type="tel"
+                      className="form-input"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="(555) 000-0000"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Email</label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="patient@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Insurance ID</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editForm.insuranceId}
+                      onChange={(e) => setEditForm((f) => ({ ...f, insuranceId: e.target.value }))}
+                      placeholder="INS-XXXXXXX"
+                    />
+                  </div>
+                </div>
+
+                {/* Clinical Info section */}
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#6b7280', marginBottom: 14, padding: '6px 12px', background: '#f3f4f6', borderRadius: 8 }}>
+                  Clinical Information
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+                  <div>
+                    <label className="form-label">Physician <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select
+                      className="form-input"
+                      value={editForm.doctorId}
+                      onChange={(e) => {
+                        const doc = doctorOptions.find((d) => d.id === e.target.value);
+                        setEditForm((f) => ({
+                          ...f,
+                          doctorId: e.target.value,
+                          physician: doc ? `${doc.name}, ${doc.title}` : f.physician,
+                        }));
+                      }}
+                    >
+                      <option value="">Select physician…</option>
+                      {doctorOptions.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}, {d.title}</option>
+                      ))}
+                      {doctorOptions.length === 0 && (
+                        <option disabled>Loading physicians…</option>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Clinic Location</label>
+                    <select
+                      className="form-input"
+                      value={editForm.clinicLocation}
+                      onChange={(e) => setEditForm((f) => ({ ...f, clinicLocation: e.target.value }))}
+                    >
+                      <option value="">Select location…</option>
+                      {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Diagnosis</label>
+                    <select
+                      className="form-input"
+                      value={editForm.diagnosis}
+                      onChange={(e) => setEditForm((f) => ({ ...f, diagnosis: e.target.value }))}
+                    >
+                      <option value="">Select diagnosis…</option>
+                      {DIAGNOSES.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Treatment Start Date</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={editForm.startDate}
+                      onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Notes section */}
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#6b7280', marginBottom: 14, padding: '6px 12px', background: '#f3f4f6', borderRadius: 8 }}>
+                  Notes
+                </div>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+                  placeholder="Clinical notes, special instructions, medication allergies…"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+
+              {/* Modal footer */}
+              <div style={{ padding: '14px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center', background: '#f9fafb', flexShrink: 0 }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={editSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-teal"
+                  onClick={handleSaveEdit}
+                  disabled={editSaving}
+                  style={{ minWidth: 120, fontWeight: 600, justifyContent: 'center' }}
+                >
+                  {editSaving ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                      Saving…
+                    </span>
+                  ) : '✓ Save Changes'}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -36,6 +36,8 @@ export async function GET() {
       shotsToday,
       testsToday,
       evalsToday,
+      activeDoctors,
+      activeNurses,
       recentLogs,
     ] = await Promise.all([
       prisma.patient.count(),
@@ -79,6 +81,12 @@ export async function GET() {
         },
       }),
 
+      // Active doctors
+      prisma.doctor.count({ where: { active: true } }),
+
+      // Active nurses
+      prisma.nurse.count({ where: { active: true } }),
+
       prisma.auditLog.findMany({
         orderBy: { createdAt: 'desc' },
         take: 20,
@@ -104,6 +112,8 @@ export async function GET() {
         shotsToday,
         testsToday,
         evalsToday,
+        activeDoctors,
+        activeNurses,
       },
       activity,
     });

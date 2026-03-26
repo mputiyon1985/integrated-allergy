@@ -1,7 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import TopBar from '@/components/layout/TopBar';
+
+// SSR-safe dynamic import of react-grid-layout
+const ResponsiveGridLayout = dynamic(
+  () =>
+    import('react-grid-layout').then((mod) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m = mod as any;
+      const { WidthProvider, Responsive } = m;
+      return WidthProvider(Responsive) as React.ComponentType<any>;
+    }),
+  { ssr: false }
+);
 
 interface DashboardStats {
   totalPatients: number;
@@ -11,6 +26,8 @@ interface DashboardStats {
   shotsToday: number;
   testsToday: number;
   evalsToday: number;
+  activeDoctors: number;
+  activeNurses: number;
 }
 
 interface ActivityItem {
@@ -30,36 +47,185 @@ const MOCK_STATS: DashboardStats = {
   shotsToday: 0,
   testsToday: 0,
   evalsToday: 0,
+  activeDoctors: 0,
+  activeNurses: 0,
 };
 
 const typeColors: Record<string, string> = {
-  'Dose Administered':    '#0055a5',
-  'Vials Generated':      '#2e7d32',
-  'Patient Created':      '#6a1b9a',
-  'Patient Added':        '#6a1b9a',
-  'Reaction Recorded':    '#c62828',
-  'Vial Expiry Alert':    '#f57c00',
-  'Allergen Updated':     '#00695c',
-  'Allergen Added':       '#00695c',
-  'Patient Updated':      '#1565c0',
-  'Appointment Created':  '#0097a7',
-  'Appointment Updated':  '#0097a7',
-  'vial_batch_created':   '#2e7d32',
+  'Dose Administered':   '#0055a5',
+  'Vials Generated':     '#2e7d32',
+  'Patient Created':     '#6a1b9a',
+  'Patient Added':       '#6a1b9a',
+  'Reaction Recorded':   '#c62828',
+  'Vial Expiry Alert':   '#f57c00',
+  'Allergen Updated':    '#00695c',
+  'Allergen Added':      '#00695c',
+  'Patient Updated':     '#1565c0',
+  'Appointment Created': '#0097a7',
+  'Appointment Updated': '#0097a7',
+  'vial_batch_created':  '#2e7d32',
 };
 
-interface KpiTile {
-  label: string;
-  value: number;
-  sub: string;
-  color?: string;
-  danger?: boolean;
-  note?: string;
+// --- Layout persistence ---
+const LAYOUT_KEY = 'ia-dashboard-layout';
+
+function isBrowser() {
+  return typeof window !== 'undefined';
 }
 
+const DEFAULT_LAYOUT = {
+  lg: [
+    { i: 'patients',  x: 0, y: 0, w: 2, h: 3 },
+    { i: 'active',    x: 2, y: 0, w: 2, h: 3 },
+    { i: 'expiring',  x: 4, y: 0, w: 2, h: 3 },
+    { i: 'doses',     x: 6, y: 0, w: 2, h: 3 },
+    { i: 'shots',     x: 0, y: 3, w: 2, h: 3 },
+    { i: 'tests',     x: 2, y: 3, w: 2, h: 3 },
+    { i: 'evals',     x: 4, y: 3, w: 2, h: 3 },
+    { i: 'doctors',   x: 6, y: 3, w: 2, h: 3 },
+    { i: 'nurses',    x: 0, y: 6, w: 2, h: 3 },
+  ],
+  md: [
+    { i: 'patients',  x: 0, y: 0, w: 2, h: 3 },
+    { i: 'active',    x: 2, y: 0, w: 2, h: 3 },
+    { i: 'expiring',  x: 4, y: 0, w: 2, h: 3 },
+    { i: 'doses',     x: 0, y: 3, w: 2, h: 3 },
+    { i: 'shots',     x: 2, y: 3, w: 2, h: 3 },
+    { i: 'tests',     x: 4, y: 3, w: 2, h: 3 },
+    { i: 'evals',     x: 0, y: 6, w: 2, h: 3 },
+    { i: 'doctors',   x: 2, y: 6, w: 2, h: 3 },
+    { i: 'nurses',    x: 4, y: 6, w: 2, h: 3 },
+  ],
+  sm: [
+    { i: 'patients',  x: 0, y: 0,  w: 2, h: 3 },
+    { i: 'active',    x: 2, y: 0,  w: 2, h: 3 },
+    { i: 'expiring',  x: 0, y: 3,  w: 2, h: 3 },
+    { i: 'doses',     x: 2, y: 3,  w: 2, h: 3 },
+    { i: 'shots',     x: 0, y: 6,  w: 2, h: 3 },
+    { i: 'tests',     x: 2, y: 6,  w: 2, h: 3 },
+    { i: 'evals',     x: 0, y: 9,  w: 2, h: 3 },
+    { i: 'doctors',   x: 2, y: 9,  w: 2, h: 3 },
+    { i: 'nurses',    x: 0, y: 12, w: 2, h: 3 },
+  ],
+};
+
+function loadLayout() {
+  try {
+    if (!isBrowser()) return DEFAULT_LAYOUT;
+    const s = localStorage.getItem(LAYOUT_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  return DEFAULT_LAYOUT;
+}
+
+function saveLayout(layouts: object) {
+  try {
+    if (!isBrowser()) return;
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(layouts));
+  } catch {}
+}
+
+// --- KPI tile definitions ---
+interface KpiDef {
+  id: string;
+  label: string;
+  icon: string;
+  getValue: (s: DashboardStats) => number;
+  sub: string;
+  color: string;
+  danger?: (s: DashboardStats) => boolean;
+  note?: (s: DashboardStats) => string | undefined;
+}
+
+const KPI_DEFS: KpiDef[] = [
+  {
+    id: 'patients',
+    label: 'Total Patients',
+    icon: '🧑‍🤝‍🧑',
+    getValue: (s) => s.totalPatients,
+    sub: 'Enrolled in IMS',
+    color: '#0055a5',
+  },
+  {
+    id: 'active',
+    label: 'Active Treatments',
+    icon: '💉',
+    getValue: (s) => s.activeTreatments,
+    sub: 'Build-Up + Maintenance',
+    color: '#2e7d32',
+  },
+  {
+    id: 'expiring',
+    label: 'Vials Due to Expire',
+    icon: '⚠️',
+    getValue: (s) => s.vialsExpiringSoon,
+    sub: 'Within 30 days',
+    color: '#f57c00',
+    danger: (s) => s.vialsExpiringSoon > 3,
+  },
+  {
+    id: 'doses',
+    label: 'Doses This Week',
+    icon: '📅',
+    getValue: (s) => s.dosesThisWeek,
+    sub: 'Administered Mon–Sun',
+    color: '#0055a5',
+  },
+  {
+    id: 'shots',
+    label: 'Shots Today',
+    icon: '🩺',
+    getValue: (s) => s.shotsToday,
+    sub: 'Appointments today',
+    color: '#1565c0',
+  },
+  {
+    id: 'tests',
+    label: 'Tests Today',
+    icon: '🔬',
+    getValue: (s) => s.testsToday,
+    sub: 'Skin tests today',
+    color: '#2e7d32',
+    note: (s) => (s.testsToday === 0 ? 'via calendar' : undefined),
+  },
+  {
+    id: 'evals',
+    label: 'Evals Today',
+    icon: '📋',
+    getValue: (s) => s.evalsToday,
+    sub: 'Evaluations today',
+    color: '#6a1b9a',
+    note: (s) => (s.evalsToday === 0 ? 'via calendar' : undefined),
+  },
+  {
+    id: 'doctors',
+    label: '# of Doctors',
+    icon: '👨‍⚕️',
+    getValue: (s) => s.activeDoctors,
+    sub: 'Active physicians',
+    color: '#0097a7',
+  },
+  {
+    id: 'nurses',
+    label: '# of Nurses',
+    icon: '👩‍⚕️',
+    getValue: (s) => s.activeNurses,
+    sub: 'Active nursing staff',
+    color: '#00695c',
+  },
+];
+
 export default function DashboardPage() {
-  const [stats, setStats]     = useState<DashboardStats | null>(null);
+  const [stats, setStats]       = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [layouts, setLayouts]   = useState<object>(DEFAULT_LAYOUT);
+
+  // Load persisted layout on mount (client only)
+  useEffect(() => {
+    setLayouts(loadLayout());
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -81,48 +247,156 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  const tiles: KpiTile[] = stats
-    ? [
-        { label: 'Total Patients',      value: stats.totalPatients,     sub: 'Enrolled in IMS',       color: '#0055a5' },
-        { label: 'Active Treatments',   value: stats.activeTreatments,  sub: 'Build-Up + Maintenance', color: '#2e7d32' },
-        { label: 'Vials Due to Expire', value: stats.vialsExpiringSoon, sub: 'Within 30 days',         danger: stats.vialsExpiringSoon > 3 },
-        { label: 'Doses This Week',     value: stats.dosesThisWeek,     sub: 'Administered Mon–Sun',   color: '#0055a5' },
-        { label: 'Shots Today',         value: stats.shotsToday,        sub: 'Appointments today',     color: '#1565c0' },
-        { label: 'Tests Today',         value: stats.testsToday,        sub: 'Skin tests today',       color: '#2e7d32', note: stats.testsToday === 0 ? 'via calendar' : undefined },
-        { label: 'Evals Today',         value: stats.evalsToday,        sub: 'Evaluations today',      color: '#6a1b9a', note: stats.evalsToday === 0 ? 'via calendar' : undefined },
-      ]
-    : [];
+  const handleLayoutChange = useCallback((_layout: any, allLayouts: object) => {
+    setLayouts(allLayouts);
+    saveLayout(allLayouts);
+  }, []);
+
+  const handleReset = () => {
+    setLayouts(DEFAULT_LAYOUT);
+    saveLayout(DEFAULT_LAYOUT);
+  };
 
   return (
     <>
       <TopBar
         title="Dashboard"
         breadcrumbs={[{ label: 'Integrated Allergy IMS' }, { label: 'Dashboard' }]}
-        actions={<span style={{ fontSize: 12, color: '#6b7280' }}>Last updated: {new Date().toLocaleTimeString()}</span>}
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {editMode && (
+              <button
+                onClick={handleReset}
+                style={{
+                  fontSize: 12,
+                  padding: '4px 12px',
+                  background: '#fff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  color: '#374151',
+                  fontWeight: 500,
+                }}
+              >
+                ↺ Reset Layout
+              </button>
+            )}
+            <button
+              onClick={() => setEditMode((e) => !e)}
+              style={{
+                fontSize: 12,
+                padding: '4px 12px',
+                background: editMode ? '#F59E0B' : '#fff',
+                border: `1px solid ${editMode ? '#F59E0B' : '#d1d5db'}`,
+                borderRadius: 6,
+                cursor: 'pointer',
+                color: editMode ? '#fff' : '#374151',
+                fontWeight: 600,
+                transition: 'all 0.15s',
+              }}
+            >
+              ✏️ {editMode ? 'Done Editing' : 'Edit Layout'}
+            </button>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              Last updated: {new Date().toLocaleTimeString()}
+            </span>
+          </div>
+        }
       />
+
       <div className="page-content">
         {loading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Loading dashboard…</div>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+            Loading dashboard…
+          </div>
         )}
 
         {!loading && stats && (
           <>
-            {/* KPI grid — 7 tiles, 4 on first row, 3 on second */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
-              {tiles.slice(0, 4).map((t) => <KpiCard key={t.label} tile={t} />)}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-              {tiles.slice(4).map((t) => <KpiCard key={t.label} tile={t} />)}
+            {editMode && (
+              <div
+                style={{
+                  marginBottom: 12,
+                  padding: '8px 14px',
+                  background: '#fffbeb',
+                  border: '1px solid #F59E0B',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  color: '#92400e',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>⠿</span>
+                <span>
+                  <strong>Edit mode active</strong> — drag tiles to rearrange, resize from the
+                  bottom-right corner. Layout saves automatically.
+                </span>
+              </div>
+            )}
+
+            {/* Draggable KPI grid */}
+            <div style={{ marginBottom: 24 }}>
+              <ResponsiveGridLayout
+                className="layout"
+                layouts={layouts}
+                onLayoutChange={handleLayoutChange}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 8, md: 6, sm: 4, xs: 2, xxs: 2 }}
+                rowHeight={40}
+                isDraggable={editMode}
+                isResizable={editMode}
+                margin={[16, 16]}
+                containerPadding={[0, 0]}
+              >
+                {KPI_DEFS.map((def) => {
+                  const value = def.getValue(stats);
+                  const isDanger = def.danger ? def.danger(stats) : false;
+                  const note = def.note ? def.note(stats) : undefined;
+                  const valueColor = isDanger
+                    ? value > 3
+                      ? '#c62828'
+                      : '#f57c00'
+                    : def.color;
+
+                  return (
+                    <div key={def.id}>
+                      <KpiCard
+                        label={def.label}
+                        icon={def.icon}
+                        value={value}
+                        sub={def.sub}
+                        note={note}
+                        valueColor={valueColor}
+                        editMode={editMode}
+                      />
+                    </div>
+                  );
+                })}
+              </ResponsiveGridLayout>
             </div>
 
-            {/* Recent Activity */}
+            {/* Recent Activity — not draggable */}
             <div className="card" style={{ padding: 0 }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>Recent Activity</h2>
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: '1px solid #d1d5db',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <h2 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
+                  Recent Activity
+                </h2>
                 <span style={{ fontSize: 11, color: '#6b7280' }}>{activity.length} events</span>
               </div>
               {activity.length === 0 ? (
-                <div style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
+                <div
+                  style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}
+                >
                   No activity yet — create patients and appointments to see events here.
                 </div>
               ) : (
@@ -140,9 +414,26 @@ export default function DashboardPage() {
                     <tbody>
                       {activity.map((item) => (
                         <tr key={item.id}>
-                          <td style={{ fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', color: '#6b7280' }}>{item.timestamp}</td>
+                          <td
+                            style={{
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              whiteSpace: 'nowrap',
+                              color: '#6b7280',
+                            }}
+                          >
+                            {item.timestamp}
+                          </td>
                           <td>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: typeColors[item.type] || '#374151', background: `${typeColors[item.type] || '#374151'}15`, padding: '2px 7px' }}>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: typeColors[item.type] || '#374151',
+                                background: `${typeColors[item.type] || '#374151'}15`,
+                                padding: '2px 7px',
+                              }}
+                            >
                               {item.type}
                             </span>
                           </td>
@@ -163,18 +454,94 @@ export default function DashboardPage() {
   );
 }
 
-function KpiCard({ tile }: { tile: KpiTile }) {
-  const valueColor = tile.danger
-    ? tile.value > 3 ? '#c62828' : '#f57c00'
-    : tile.color ?? '#0055a5';
+interface KpiCardProps {
+  label: string;
+  icon: string;
+  value: number;
+  sub: string;
+  note?: string;
+  valueColor: string;
+  editMode: boolean;
+}
+
+function KpiCard({ label, icon, value, sub, note, valueColor, editMode }: KpiCardProps) {
+  const [hovered, setHovered] = useState(false);
 
   return (
-    <div className="kpi-tile">
-      <div className="kpi-label">{tile.label}</div>
-      <div className="kpi-value" style={{ color: valueColor }}>{tile.value}</div>
-      <div className="kpi-sub">
-        {tile.sub}
-        {tile.note && <span style={{ marginLeft: 4, color: '#9ca3af', fontStyle: 'italic' }}>({tile.note})</span>}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: '#ffffff',
+        borderRadius: 12,
+        boxShadow: hovered
+          ? '0 4px 16px rgba(0,0,0,0.12)'
+          : '0 2px 8px rgba(0,0,0,0.08)',
+        border: editMode ? '2px solid #F59E0B' : '1px solid #e5e7eb',
+        padding: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 6,
+        height: '100%',
+        position: 'relative',
+        transition: 'box-shadow 0.15s, border-color 0.15s',
+        cursor: editMode ? 'grab' : 'default',
+        userSelect: 'none',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Drag handle — visible in edit mode */}
+      {editMode && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 10,
+            fontSize: 16,
+            color: '#F59E0B',
+            lineHeight: 1,
+            cursor: 'grab',
+          }}
+        >
+          ⠿
+        </span>
+      )}
+
+      {/* Icon */}
+      <div style={{ fontSize: 24, lineHeight: 1, marginBottom: 2 }}>{icon}</div>
+
+      {/* Label */}
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          color: '#6b7280',
+        }}
+      >
+        {label}
+      </div>
+
+      {/* Value */}
+      <div
+        style={{
+          fontSize: 32,
+          fontWeight: 800,
+          color: valueColor,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+
+      {/* Sub + note */}
+      <div style={{ fontSize: 11, color: '#9ca3af' }}>
+        {sub}
+        {note && (
+          <span style={{ marginLeft: 4, fontStyle: 'italic' }}>({note})</span>
+        )}
       </div>
     </div>
   );

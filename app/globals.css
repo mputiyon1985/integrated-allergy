@@ -138,36 +138,58 @@ body {
   font-weight: 500;
   cursor: pointer;
   border: none;
-  transition: background 0.15s;
+  border-radius: 8px;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn-primary {
   background: var(--primary);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 85, 165, 0.25);
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
+  box-shadow: 0 3px 8px rgba(0, 85, 165, 0.3);
 }
 
 .btn-secondary {
   background: #fff;
   color: var(--text);
   border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .btn-secondary:hover {
   background: #f9fafb;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .btn-danger {
   background: var(--danger);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(198, 40, 40, 0.25);
+}
+
+.btn-teal {
+  background: #2ec4b6;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(46, 196, 182, 0.3);
+}
+
+.btn-teal:hover {
+  background: #20b2a5;
+  box-shadow: 0 3px 8px rgba(46, 196, 182, 0.4);
 }
 
 .btn-sm {
-  padding: 3px 10px;
+  padding: 4px 12px;
   font-size: 12px;
+  border-radius: 8px;
 }
 
 /* Card */
@@ -175,6 +197,8 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 /* Form */
@@ -190,18 +214,19 @@ body {
 
 .form-input {
   width: 100%;
-  padding: 7px 10px;
+  padding: 8px 12px;
   font-size: 13px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   background: #fff;
   color: var(--text);
   outline: none;
-  transition: border-color 0.15s;
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .form-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(0, 85, 165, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 85, 165, 0.1);
 }
 
 /* Sidebar */
@@ -377,4 +402,25 @@ body {
 
 .search-input:focus {
   border-color: var(--primary);
+}
+
+/* Spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Teal accent for edit buttons */
+.btn-teal {
+  background: #2ec4b6;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(46, 196, 182, 0.3);
+}
+.btn-teal:hover {
+  background: #20b2a5;
+  box-shadow: 0 3px 8px rgba(46, 196, 182, 0.4);
+}
+
+/* Search input rounded */
+.search-input {
+  border-radius: 8px;
 }

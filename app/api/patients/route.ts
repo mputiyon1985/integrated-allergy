@@ -84,6 +84,10 @@ export async function POST(req: NextRequest) {
         clinicLocation: body.clinicLocation ?? '',
         diagnosis: body.diagnosis ?? '',
         startDate: body.startDate ? new Date(body.startDate) : new Date(),
+        phone: body.phone ?? null,
+        email: body.email ?? null,
+        insuranceId: body.insuranceId ?? null,
+        notes: body.notes ?? null,
         ...(body.doctorId ? { doctorId: body.doctorId } : {}),
       },
     });
