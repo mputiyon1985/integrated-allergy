@@ -85,7 +85,7 @@ export default function NewPatientPage() {
             setForm((f) => ({
               ...f,
               doctorId: doctorIdParam,
-              physician: `${doc.title} ${doc.name}`,
+              physician: `${doc.name}, ${doc.title}`,
             }));
           }
         }
@@ -254,13 +254,13 @@ export default function NewPatientPage() {
                   onChange={(e) => {
                     const doc = doctors.find((d) => d.id === e.target.value);
                     set('doctorId', e.target.value);
-                    set('physician', doc ? `${doc.title} ${doc.name}` : '');
+                    set('physician', doc ? `${doc.name}, ${doc.title}` : '');
                   }}
                   required
                 >
                   <option value="">Select physician…</option>
                   {doctors.map((d) => (
-                    <option key={d.id} value={d.id}>{d.title} {d.name}</option>
+                    <option key={d.id} value={d.id}>{d.name}, {d.title}</option>
                   ))}
                   {doctors.length === 0 && (
                     <option disabled>No active doctors — add one in Doctors section</option>

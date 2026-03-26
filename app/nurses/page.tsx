@@ -275,7 +275,7 @@ export default function NursesPage() {
                       <Avatar name={nurse.name} photoUrl={nurse.photoUrl} size={40} />
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#111827' }}>
-                      {nurse.title} {nurse.name}
+                      {nurse.name}, {nurse.title}
                     </td>
                     <td style={{ padding: '10px 14px', color: '#374151' }}>{nurse.title}</td>
                     <td style={{ padding: '10px 14px', color: '#374151' }}>{nurse.clinicLocation ?? '—'}</td>

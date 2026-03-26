@@ -279,7 +279,7 @@ export default function DoctorsPage() {
                       <Avatar name={doc.name} photoUrl={doc.photoUrl} size={40} />
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: '#111827' }}>
-                      {doc.title} {doc.name}
+                      {doc.name}, {doc.title}
                     </td>
                     <td style={{ padding: '10px 14px', color: '#374151' }}>{doc.title}</td>
                     <td style={{ padding: '10px 14px', color: '#374151' }}>{doc.specialty}</td>
@@ -501,7 +501,7 @@ export default function DoctorsPage() {
           <div style={{ background: '#fff', width: 400, borderRadius: 8, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', padding: 24 }}>
             <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: '#111827' }}>⚠️ Confirm Deactivation</h3>
             <p style={{ margin: '0 0 20px', fontSize: 13, color: '#374151' }}>
-              Are you sure you want to deactivate <strong>{confirmDelete.title} {confirmDelete.name}</strong>?
+              Are you sure you want to deactivate <strong>{confirmDelete.name}, {confirmDelete.title}</strong>?
               They will be set to inactive and removed from patient assignment dropdowns.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
