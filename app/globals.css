@@ -230,8 +230,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
+  background: #2ec4b6;
+  border-bottom: none;
   padding: 0 24px;
   height: 52px;
   display: flex;

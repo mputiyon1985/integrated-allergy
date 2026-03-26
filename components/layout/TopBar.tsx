@@ -18,12 +18,12 @@ export default function TopBar({ title, breadcrumbs, actions }: TopBarProps) {
     <header className="topbar">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#6b7280' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>
             {breadcrumbs.map((bc, i) => (
               <React.Fragment key={i}>
-                {i > 0 && <span style={{ color: '#d1d5db' }}>›</span>}
+                {i > 0 && <span style={{ color: 'rgba(255,255,255,0.6)' }}>›</span>}
                 {bc.href ? (
-                  <a href={bc.href} style={{ color: '#0055a5', textDecoration: 'none' }}>
+                  <a href={bc.href} style={{ color: '#fff', textDecoration: 'none', opacity: 0.9 }}>
                     {bc.label}
                   </a>
                 ) : (
@@ -37,7 +37,7 @@ export default function TopBar({ title, breadcrumbs, actions }: TopBarProps) {
           style={{
             fontSize: 16,
             fontWeight: 700,
-            color: '#1a1a2e',
+            color: '#ffffff',
             letterSpacing: '-0.01em',
           }}
         >
