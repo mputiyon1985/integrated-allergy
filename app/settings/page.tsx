@@ -1661,6 +1661,7 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [allLocations, setAllLocations] = useState<EntityLocRow[]>([]);
   const [doctors, setDoctors] = useState<{ id: string; name: string; title: string; email: string | null; entityId: string | null }[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
   const [nurses, setNurses] = useState<{ id: string; name: string; title: string; email: string | null; entityId: string | null }[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
@@ -1875,7 +1876,24 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
               <div><Label>Email <span style={{ color: '#c62828' }}>*</span></Label><input type="email" className="form-input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@example.com" /></div>
               <div>
                 <Label>{editing ? 'New Password (leave blank to keep current)' : 'Temporary Password'} {!editing && <span style={{ color: '#c62828' }}>*</span>}</Label>
-                <input type="password" className="form-input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder={editing ? 'Enter new password…' : 'Temporary password'} />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    placeholder={editing ? 'Enter new password…' : 'Temporary password'}
+                    style={{ paddingRight: '44px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, padding: 2 }}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
               <div>
                 <Label>Role</Label>
