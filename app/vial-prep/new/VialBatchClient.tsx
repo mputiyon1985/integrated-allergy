@@ -455,7 +455,7 @@ export default function NewVialBatchPage() {
             ...Object.keys(groups).filter((t) => !typeOrder.includes(t)).sort(),
           ];
 
-          // 3-column layout
+          // 3-column layout: ANIMAL+DUST | FOOD+INSECT | MOLD+POLLEN (remaining distributed)
           const col1 = sortedGroupKeys.slice(0, 2);
           const col2 = sortedGroupKeys.slice(2, 4);
           const col3 = sortedGroupKeys.slice(4);
@@ -471,8 +471,8 @@ export default function NewVialBatchPage() {
             const items = groups[key];
             if (!items) return null;
             return (
-              <div key={key} style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e5e7eb' }}>
+              <div key={key} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: 4, paddingBottom: 3, borderBottom: '2px solid #e5e7eb' }}>
                   {key}
                 </div>
                 {items.map((a) => {
@@ -481,10 +481,11 @@ export default function NewVialBatchPage() {
                     <div
                       key={a.id}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 6,
-                        background: isChecked ? '#e8f9f7' : 'transparent',
-                        marginBottom: 2, cursor: 'pointer',
-                        transition: 'background 0.15s',
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '2px 5px', borderRadius: 4,
+                        background: isChecked ? '#f0fdfa' : 'transparent',
+                        border: isChecked ? '1px solid #99f6e4' : '1px solid transparent',
+                        marginBottom: 1, cursor: 'pointer',
+                        transition: 'background 0.12s',
                       }}
                       onClick={() => {
                         setGridChecked((prev) => {
@@ -502,9 +503,9 @@ export default function NewVialBatchPage() {
                         onClick={(e) => e.stopPropagation()}
                         style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
                       />
-                      <span style={{ flex: 1, fontSize: 12, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.3 }}>{a.name}</span>
+                      <span style={{ fontSize: 11, color: isChecked ? '#0f766e' : '#374151', fontWeight: isChecked ? 700 : 400, lineHeight: 1.3 }}>{a.name}</span>
                       {isChecked && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2, paddingLeft: 18 }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="number"
                             value={gridChecked[a.id]}
@@ -514,9 +515,9 @@ export default function NewVialBatchPage() {
                               const val = e.target.value;
                               setGridChecked((prev) => ({ ...prev, [a.id]: val }));
                             }}
-                            style={{ width: 52, padding: '2px 4px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 11, textAlign: 'right', background: '#f0fdfa' }}
+                            style={{ width: 44, padding: '1px 4px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 11, textAlign: 'right', background: '#f0fdfa' }}
                           />
-                          <span style={{ fontSize: 10, color: '#6b7280' }}>mL</span>
+                          <span style={{ fontSize: 10, color: '#0d9488', fontWeight: 600 }}>mL</span>
                         </div>
                       )}
                     </div>
@@ -599,12 +600,15 @@ export default function NewVialBatchPage() {
                   )}
                 </div>
 
-                {/* 3-column allergen grid */}
+                {/* 4-column allergen grid */}
                 {allergenOptions.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
                 ) : (
-                  <div style={{ columns: '130px auto', columnGap: 8, maxHeight: '320px', overflow: 'auto' }}>
-                    {sortedGroupKeys.map(renderGroup)}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0 }}>
+                    <div style={{ paddingRight: 14, borderRight: '1px solid #e5e7eb' }}>{col1.map(renderGroup)}</div>
+                    <div style={{ padding: '0 14px', borderRight: '1px solid #e5e7eb' }}>{col2.map(renderGroup)}</div>
+                    <div style={{ padding: '0 14px', borderRight: '1px solid #e5e7eb' }}>{col3.map(renderGroup)}</div>
+                    <div style={{ paddingLeft: 14 }}>{col4.map(renderGroup)}</div>
                   </div>
                 )}
               </div>
