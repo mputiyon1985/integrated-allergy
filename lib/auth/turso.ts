@@ -9,9 +9,21 @@ interface TursoRow {
   [key: string]: string | number | null;
 }
 
+interface TursoCell {
+  type: 'text' | 'integer' | 'float' | 'blob' | 'null';
+  value?: string;
+}
+
 interface TursoResult {
   cols: Array<{ name: string }>;
-  rows: Array<Array<string | number | null>>;
+  rows: Array<Array<TursoCell>>;
+}
+
+function unwrapCell(cell: TursoCell): string | number | null {
+  if (cell.type === 'null' || cell.value === undefined) return null;
+  if (cell.type === 'integer') return parseInt(cell.value, 10);
+  if (cell.type === 'float') return parseFloat(cell.value);
+  return cell.value; // text, blob
 }
 
 async function tursoQuery(sql: string, args: Array<string | number | null> = []): Promise<TursoResult> {
@@ -46,14 +58,14 @@ async function tursoQuery(sql: string, args: Array<string | number | null> = [])
   const data = await res.json();
   const result = data.results[0];
   if (result.type === 'error') {
-    throw new Error(result.error.message);
+    throw new Error(result.error?.message || 'Turso query error');
   }
   return result.response.result;
 }
 
 function rowToObject(result: TursoResult): TursoRow[] {
   return result.rows.map(row =>
-    Object.fromEntries(result.cols.map((col, i) => [col.name, row[i]]))
+    Object.fromEntries(result.cols.map((col, i) => [col.name, unwrapCell(row[i])]))
   );
 }
 
