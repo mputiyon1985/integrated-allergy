@@ -117,27 +117,17 @@ export default function CalendarPage() {
   }, [newParam, patientIdParam]);
 
   // Load patients
+  // Load patients, doctors, nurses in parallel
   useEffect(() => {
-    fetch('/api/patients')
-      .then((r) => r.json())
-      .then((d) => setPatients(d.patients ?? []))
-      .catch(() => {});
-  }, []);
-
-  // Load doctors
-  useEffect(() => {
-    fetch('/api/doctors?active=true')
-      .then((r) => r.json())
-      .then((d) => setDoctors(d.doctors ?? []))
-      .catch(() => {});
-  }, []);
-
-  // Load nurses
-  useEffect(() => {
-    fetch('/api/nurses?active=true')
-      .then((r) => r.json())
-      .then((d) => setNurses(d.nurses ?? []))
-      .catch(() => {});
+    Promise.allSettled([
+      fetch('/api/patients').then(r => r.json()),
+      fetch('/api/doctors?active=true').then(r => r.json()),
+      fetch('/api/nurses?active=true').then(r => r.json()),
+    ]).then(([p, d, n]) => {
+      if (p.status === 'fulfilled') setPatients(p.value.patients ?? []);
+      if (d.status === 'fulfilled') setDoctors(d.value.doctors ?? []);
+      if (n.status === 'fulfilled') setNurses(n.value.nurses ?? []);
+    }).catch(() => {});
   }, []);
 
   // Load appointments for current view window
