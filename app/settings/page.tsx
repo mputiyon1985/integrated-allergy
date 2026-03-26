@@ -43,7 +43,7 @@ type TileId =
 
 // ─── Layout persistence ───────────────────────────────────────────────────────
 
-const LAYOUT_KEY = 'ia-settings-layout';
+const LAYOUT_KEY = 'ia-settings-layout-v2';
 
 const TILE_IDS: TileId[] = [
   'branding', 'notifications', 'appearance', 'clinic', 'security', 'export',
