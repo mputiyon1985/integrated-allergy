@@ -1,5 +1,5 @@
 # Auth Build Status
-Last updated: 2026-03-26 00:53 EDT
+Last updated: 2026-03-26 01:00 EDT
 
 ## Completed ✅
 - Step 1: Dependencies installed (bcryptjs, jsonwebtoken, speakeasy, qrcode, jose + types)
@@ -17,10 +17,12 @@ Last updated: 2026-03-26 00:53 EDT
   - lib/auth/session.ts (verifySession, canAccessEntity, canAccessLocation, requireAuth)
   - lib/auth/turso.ts (direct Turso HTTP client for auth ops)
 - Step 5: Login page written (app/login/page.tsx) — 3-step flow: credentials → MFA verify → MFA setup
-- Step 6: middleware.ts written — protects all routes except /login + /api/auth/*
-- Step 7a: `npm run build` — PASSED ✅
-- Step 7b: git commit + push — DONE ✅ (commit 3b6c34c)
-- JWT_SECRET added to .env and confirmed present in Vercel env vars
+- Step 6: proxy.ts written — protects all routes except /login + /api/auth/*
+  - Fixed: renamed middleware.ts → proxy.ts (Next.js 16 requirement)
+  - Fixed: added types/modules.d.ts for speakeasy/qrcode type declarations
+- Step 7a: `npm run build` — PASSED ✅ (clean, no warnings)
+- Step 7b: git commit + push — DONE ✅ (commit 8cdf656)
+- JWT_SECRET confirmed present in Vercel env vars
 
 ## In Progress 🔄
 - Step 7c: Vercel production deploy — deploying now...

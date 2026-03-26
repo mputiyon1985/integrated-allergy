@@ -1,7 +1,8 @@
 // Direct Turso HTTP client for auth operations
 // Used instead of Prisma since auth tables are managed directly
 
-const DB_URL = process.env.DATABASE_URL || '';
+// Convert libsql:// to https:// for HTTP API calls
+const DB_URL = (process.env.DATABASE_URL || '').replace(/^libsql:\/\//, 'https://');
 const DB_TOKEN = process.env.DATABASE_AUTH_TOKEN || '';
 
 interface TursoRow {
