@@ -117,9 +117,9 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6' }}>
       {/* Clinic branding */}
-      <div style={{ padding: '12px 0px 12px 0px', borderBottom: '1px solid #2d3f5e', background: '#1a2233' }}>
+      <div style={{ padding: '12px 0px 12px 0px', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <img
             src="/integrated-allergy-logo.jpg"
@@ -129,16 +129,15 @@ export default function Sidebar() {
               height: 60,
               display: 'block',
               objectFit: 'contain',
-              mixBlendMode: 'multiply',
             }}
           />
-          <div style={{ color: '#8a9bbf', fontSize: 10 }}>IMS v2.0 · © 2026</div>
+          <div style={{ color: '#9ca3af', fontSize: 10 }}>IMS v2.0 · © 2026</div>
         </div>
       </div>
 
       {/* Navigation */}
       <nav style={{ flex: 1, padding: '8px 0' }}>
-        <div style={{ padding: '8px 16px 4px', color: '#5a6a8a', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <div style={{ padding: '8px 16px 4px', color: '#9ca3af', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           Navigation
         </div>
         {NAV_ITEMS.map((item) => {
@@ -171,7 +170,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid #2d3f5e', color: '#5a6a8a', fontSize: 11 }}>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', color: '#9ca3af', fontSize: 11 }}>
         <div>© 2026 Integrated Allergy</div>
         <div style={{ marginTop: 2 }}>Clinical IMS Platform</div>
       </div>

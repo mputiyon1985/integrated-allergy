@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --sidebar-bg: #1a2233;
-  --sidebar-text: #c8d3e8;
-  --sidebar-active: #0055a5;
-  --sidebar-hover: #243050;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #374151;
+  --sidebar-active: #e8f9f7;
+  --sidebar-hover: #f0fffe;
   --bg: #f4f6f9;
   --card: #ffffff;
   --primary: #0055a5;
