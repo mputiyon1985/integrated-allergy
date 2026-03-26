@@ -117,7 +117,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6' }}>
+    <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff' }}>
       {/* Clinic branding */}
       <div style={{ padding: '12px 0px 12px 0px', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -151,8 +151,8 @@ export default function Sidebar() {
                 alignItems: 'center',
                 gap: 10,
                 padding: '8px 16px',
-                color: active ? '#ffffff' : '#c8d3e8',
-                background: active ? '#0055a5' : 'transparent',
+                color: active ? '#0d9488' : '#374151',
+                background: active ? '#e8f9f7' : 'transparent',
                 textDecoration: 'none',
                 fontSize: 13,
                 fontWeight: active ? 600 : 400,
