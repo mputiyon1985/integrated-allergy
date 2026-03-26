@@ -96,14 +96,14 @@ export default function NewVialBatchPage() {
   const [verifiedBy, setVerifiedBy] = useState('');
   const [notes, setNotes]           = useState('');
 
-  // Step 2
+  // Step 2 — allergen grid state (source of truth)
   const [allergenOptions, setAllergenOptions] = useState<AllergenOption[]>([]);
+  const [gridChecked, setGridChecked]         = useState<Record<string, string>>({});
+  const [prePopulated, setPrePopulated]       = useState(false);
   const [mixEntries, setMixEntries]           = useState<MixEntry[]>([]);
   const [targetVolume, setTargetVolume]       = useState(10);
   const [glycerinPct, setGlycerinPct]         = useState(10);
-  const [showAllergenPicker, setShowAllergenPicker] = useState(false);
-  const [allergenSearch, setAllergenSearch]         = useState('');
-  const [safetyWarnings, setSafetyWarnings]         = useState<SafetyWarning[]>([]);
+  const [safetyWarnings, setSafetyWarnings]   = useState<SafetyWarning[]>([]);
 
   // Step 3
   const [vialPreviews, setVialPreviews] = useState<VialPreview[]>([]);
@@ -126,6 +126,45 @@ export default function NewVialBatchPage() {
       setDataReady(true);
     });
   }, [prePatientId]);
+
+  // ── Pre-populate grid from patient allergen mix when patientId is set ───────
+  useEffect(() => {
+    if (!patientId) {
+      setGridChecked({});
+      setPrePopulated(false);
+      return;
+    }
+    fetch(`/api/patients/${patientId}/allergens`)
+      .then((r) => r.json())
+      .catch(() => ({ allergens: [] }))
+      .then((data: { allergens?: Array<{ allergenId: string; volume: number }> }) => {
+        const items = data.allergens ?? [];
+        if (items.length > 0) {
+          const checked: Record<string, string> = {};
+          items.forEach((a) => { checked[a.allergenId] = String(a.volume); });
+          setGridChecked(checked);
+          setPrePopulated(true);
+        }
+      });
+  }, [patientId]);
+
+  // ── Sync gridChecked → mixEntries ───────────────────────────────────────────
+  useEffect(() => {
+    const entries: MixEntry[] = Object.entries(gridChecked)
+      .map(([allergenId, vol]) => {
+        const opt = allergenOptions.find((a) => a.id === allergenId);
+        if (!opt) return null;
+        return {
+          allergenId,
+          name: opt.name,
+          type: opt.type,
+          volumeMl: parseFloat(vol) || 0,
+          stockConc: opt.stockConcentration,
+        };
+      })
+      .filter(Boolean) as MixEntry[];
+    setMixEntries(entries);
+  }, [gridChecked, allergenOptions]);
 
   // ── Auto-batch name ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -175,23 +214,6 @@ export default function NewVialBatchPage() {
     const hasHardError = safetyWarnings.some((w) => w.level === 'error');
     if (hasHardError) { setStepError('Fix safety errors before proceeding.'); return false; }
     return true;
-  }
-
-  // ── Allergen mix helpers ────────────────────────────────────────────────────
-
-  function addAllergen(a: AllergenOption) {
-    if (mixEntries.find((e) => e.allergenId === a.id)) return;
-    setMixEntries((prev) => [...prev, { allergenId: a.id, name: a.name, type: a.type, volumeMl: 1.0, stockConc: a.stockConcentration }]);
-    setShowAllergenPicker(false);
-    setAllergenSearch('');
-  }
-
-  function removeAllergen(allergenId: string) {
-    setMixEntries((prev) => prev.filter((e) => e.allergenId !== allergenId));
-  }
-
-  function updateVolume(allergenId: string, vol: number) {
-    setMixEntries((prev) => prev.map((e) => e.allergenId === allergenId ? { ...e, volumeMl: vol } : e));
   }
 
   const totalMixVol = mixEntries.reduce((s, e) => s + (e.volumeMl || 0), 0);
@@ -248,9 +270,6 @@ export default function NewVialBatchPage() {
 
   // ── Derived display ─────────────────────────────────────────────────────────
   const selectedPatient = patients.find((p) => p.id === patientId);
-  const filteredAllergens = allergenOptions.filter((a) =>
-    !allergenSearch || a.name.toLowerCase().includes(allergenSearch.toLowerCase()) || a.type.toLowerCase().includes(allergenSearch.toLowerCase())
-  );
 
   if (!dataReady) {
     return (
@@ -261,7 +280,6 @@ export default function NewVialBatchPage() {
           actions={<button className="btn btn-secondary" onClick={() => router.push('/vial-prep')}>Cancel</button>}
         />
         <div className="page-content">
-          {/* Step indicator skeleton */}
           <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #d1d5db', overflow: 'hidden', borderRadius: 8 }}>
             {[1, 2, 3].map((n) => (
               <div key={n} style={{ flex: 1, padding: '10px 16px', background: n === 1 ? '#f0f7ff' : '#fff', borderRight: n < 3 ? '1px solid #d1d5db' : 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -270,14 +288,13 @@ export default function NewVialBatchPage() {
               </div>
             ))}
           </div>
-          {/* Form skeleton */}
-          <div className="card" style={{ padding: 24 }}>
+          <div className="card" style={{ padding: 24, borderRadius: 14 }}>
             <div style={{ height: 16, width: 180, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4, marginBottom: 20 }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ height: 11, width: '40%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
-                  <div style={{ height: 34, width: '100%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 6 }} />
+                  <div style={{ height: 34, width: '100%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 10 }} />
                 </div>
               ))}
             </div>
@@ -303,7 +320,7 @@ export default function NewVialBatchPage() {
 
       <div className="page-content">
         {/* Step indicator */}
-        <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #d1d5db', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 0, marginBottom: 24, border: '1px solid #d1d5db', overflow: 'hidden', borderRadius: 10 }}>
           {STEPS.map((s) => {
             const done    = step > s.n;
             const active  = step === s.n;
@@ -344,7 +361,7 @@ export default function NewVialBatchPage() {
 
         {/* ── STEP 1: Patient + Batch Info ── */}
         {step === 1 && (
-          <div className="card">
+          <div className="card" style={{ borderRadius: 14 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: 18, paddingBottom: 10, borderBottom: '1px solid #e5e7eb' }}>
               Patient &amp; Batch Information
             </h3>
@@ -358,10 +375,10 @@ export default function NewVialBatchPage() {
                   placeholder="Search patient by name or ID…"
                   value={patientSearch}
                   onChange={(e) => { setPatientSearch(e.target.value); if (!e.target.value) setPatientId(''); }}
-                  style={{ maxWidth: 400 }}
+                  style={{ maxWidth: 400, borderRadius: 10 }}
                 />
                 {patientSearch && !patientId && (
-                  <div style={{ border: '1px solid #d1d5db', maxHeight: 160, overflowY: 'auto', background: '#fff', maxWidth: 400 }}>
+                  <div style={{ border: '1px solid #d1d5db', maxHeight: 160, overflowY: 'auto', background: '#fff', maxWidth: 400, borderRadius: 10, marginTop: 4 }}>
                     {patients.filter((p) => p.name.toLowerCase().includes(patientSearch.toLowerCase()) || p.patientId.toLowerCase().includes(patientSearch.toLowerCase())).slice(0, 8).map((p) => (
                       <div key={p.id} onClick={() => { setPatientId(p.id); setPatientSearch(p.name); }} style={{ padding: '7px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid #f0f2f5' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f7ff')} onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}>
                         <strong>{p.name}</strong> <span style={{ color: '#6b7280', fontSize: 11 }}>{p.patientId}</span>
@@ -376,16 +393,16 @@ export default function NewVialBatchPage() {
 
               <div>
                 <label className="form-label">Batch Name / Number</label>
-                <input type="text" className="form-input" placeholder="e.g. Batch #3" value={batchName} onChange={(e) => setBatchName(e.target.value)} />
+                <input type="text" className="form-input" placeholder="e.g. Batch #3" value={batchName} onChange={(e) => setBatchName(e.target.value)} style={{ borderRadius: 10 }} />
               </div>
               <div>
                 <label className="form-label">Prescription Date</label>
-                <input type="date" className="form-input" value={prescriptionDate} onChange={(e) => setPrescriptionDate(e.target.value)} />
+                <input type="date" className="form-input" value={prescriptionDate} onChange={(e) => setPrescriptionDate(e.target.value)} style={{ borderRadius: 10 }} />
               </div>
               <div>
                 <label className="form-label">Prepared By <span style={{ color: '#c62828' }}>*</span></label>
                 {nurses.length > 0 ? (
-                  <select className="form-input" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)}>
+                  <select className="form-input" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} style={{ borderRadius: 10 }}>
                     <option value="">Select nurse…</option>
                     {nurses.map((n) => (
                       <option key={n.id} value={`${n.name}, ${n.title}`}>{n.name}, {n.title}</option>
@@ -393,7 +410,7 @@ export default function NewVialBatchPage() {
                   </select>
                 ) : (
                   <>
-                    <input type="text" className="form-input" placeholder="Nurse / pharmacist name" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} />
+                    <input type="text" className="form-input" placeholder="Nurse / pharmacist name" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} style={{ borderRadius: 10 }} />
                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>No nurses on file — <a href="/nurses" style={{ color: '#0055a5' }}>add nurses first</a> or type name above</div>
                   </>
                 )}
@@ -401,7 +418,7 @@ export default function NewVialBatchPage() {
               <div>
                 <label className="form-label">Verified By</label>
                 {nurses.length > 0 ? (
-                  <select className="form-input" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)}>
+                  <select className="form-input" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} style={{ borderRadius: 10 }}>
                     <option value="">Select nurse… (recommended: different from Prepared By)</option>
                     {nurses.map((n) => (
                       <option key={n.id} value={`${n.name}, ${n.title}`}>{n.name}, {n.title}</option>
@@ -409,149 +426,193 @@ export default function NewVialBatchPage() {
                   </select>
                 ) : (
                   <>
-                    <input type="text" className="form-input" placeholder="Second-check staff name" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} />
+                    <input type="text" className="form-input" placeholder="Second-check staff name" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} style={{ borderRadius: 10 }} />
                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>No nurses on file — <a href="/nurses" style={{ color: '#0055a5' }}>add nurses first</a> or type name above</div>
                   </>
                 )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label className="form-label">Notes</label>
-                <textarea className="form-input" rows={3} style={{ resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special instructions, clinical notes…" />
+                <textarea className="form-input" rows={3} style={{ resize: 'vertical', borderRadius: 10 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special instructions, clinical notes…" />
               </div>
             </div>
           </div>
         )}
 
-        {/* ── STEP 2: Allergen Mix ── */}
-        {step === 2 && (
-          <div>
-            {/* Safety panel */}
-            {safetyWarnings.map((w, i) => (
-              <SafetyAlert key={i} level={w.level === 'error' ? 'danger' : 'warning'} message={w.message} />
-            ))}
+        {/* ── STEP 2: Allergen Mix (inline grid) ── */}
+        {step === 2 && (() => {
+          // Group allergen library by type, sorted alphabetically
+          const typeOrder = ['Pollen', 'Mold', 'Dust', 'Animals', 'Insects', 'Foods', 'Other'];
+          const groups: Record<string, typeof allergenOptions> = {};
+          allergenOptions.forEach((a) => {
+            const key = a.type || 'Other';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(a);
+          });
+          Object.keys(groups).forEach((k) => { groups[k].sort((a, b) => a.name.localeCompare(b.name)); });
+          const sortedGroupKeys = [
+            ...typeOrder.filter((t) => groups[t]),
+            ...Object.keys(groups).filter((t) => !typeOrder.includes(t)).sort(),
+          ];
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
-              {/* Target volume + Glycerin */}
-              <div className="card">
-                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 12 }}>Batch Parameters</h4>
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  <div>
-                    <label className="form-label">Target Total Volume</label>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {TARGET_VOLUMES.map((v) => (
-                        <button key={v} type="button" onClick={() => setTargetVolume(v)} style={{ padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: targetVolume === v ? '#0055a5' : '#f9fafb', color: targetVolume === v ? '#fff' : '#374151', border: '1px solid #d1d5db' }}>
-                          {v} mL
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="form-label">Glycerin % <span style={{ color: glycerinPct > 50 ? '#c62828' : glycerinPct > 40 ? '#f57c00' : '#9ca3af' }}>{glycerinPct > 50 ? '⛔ EXCEEDS LIMIT' : glycerinPct > 40 ? '⚠ Near limit' : ''}</span></label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <input type="range" min={0} max={60} value={glycerinPct} onChange={(e) => setGlycerinPct(Number(e.target.value))} style={{ width: 120 }} />
-                      <input type="number" className="form-input" style={{ width: 70 }} min={0} max={60} value={glycerinPct} onChange={(e) => setGlycerinPct(Number(e.target.value))} />
-                      <span style={{ fontSize: 13, color: '#6b7280' }}>%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          // 3-column layout
+          const col1 = sortedGroupKeys.slice(0, 2);
+          const col2 = sortedGroupKeys.slice(2, 4);
+          const col3 = sortedGroupKeys.slice(4);
 
-              {/* Volume meter */}
-              <div className="card">
-                <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 12 }}>Volume Status</h4>
-                <div style={{ fontSize: 28, fontWeight: 700, color: totalMixVol > targetVolume ? '#c62828' : totalMixVol === targetVolume ? '#2e7d32' : '#0055a5' }}>
-                  {totalMixVol.toFixed(1)} / {targetVolume} mL
-                </div>
-                <div style={{ height: 8, background: '#f0f2f5', marginTop: 10, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.min(100, (totalMixVol / targetVolume) * 100)}%`, background: totalMixVol > targetVolume ? '#c62828' : totalMixVol === targetVolume ? '#2e7d32' : '#0055a5', transition: 'width 0.2s' }} />
-                </div>
-                {totalMixVol > targetVolume && <div style={{ fontSize: 11, color: '#c62828', marginTop: 6 }}>⛔ Exceeds target by {(totalMixVol - targetVolume).toFixed(1)} mL</div>}
-                {totalMixVol < targetVolume && totalMixVol > 0 && <div style={{ fontSize: 11, color: '#f57c00', marginTop: 6 }}>⚠ {(targetVolume - totalMixVol).toFixed(1)} mL remaining</div>}
-                {totalMixVol === targetVolume && totalMixVol > 0 && <div style={{ fontSize: 11, color: '#2e7d32', marginTop: 6 }}>✓ Target reached</div>}
-              </div>
-            </div>
+          const totalSelected = Object.keys(gridChecked).length;
+          const totalVolume = Object.values(gridChecked).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
 
-            {/* Allergen table */}
-            <div className="card" style={{ padding: 0 }}>
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: 13, fontWeight: 700 }}>Allergen Mix ({mixEntries.length} component{mixEntries.length !== 1 ? 's' : ''})</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowAllergenPicker(true)}>+ Add Allergen</button>
-              </div>
-              {mixEntries.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens added yet. Click &quot;+ Add Allergen&quot; to begin.</div>
-              ) : (
-                <table className="clinical-table">
-                  <thead>
-                    <tr>
-                      <th>Allergen</th>
-                      <th>Type</th>
-                      <th>Stock Conc.</th>
-                      <th>Volume (mL)</th>
-                      <th>Remove</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mixEntries.map((e) => (
-                      <tr key={e.allergenId}>
-                        <td style={{ fontWeight: 500 }}>{e.name}</td>
-                        <td style={{ color: '#6b7280' }}>{e.type}</td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.stockConc || '—'}</td>
-                        <td>
+          // Safety: mold+pollen cross-reactivity
+          const checkedTypes = new Set(allergenOptions.filter((a) => gridChecked[a.id]).map((a) => (a.type || '').toLowerCase()));
+          const hasMoldPollenWarning = checkedTypes.has('mold') && checkedTypes.has('pollen');
+
+          const renderGroup = (key: string) => {
+            const items = groups[key];
+            if (!items) return null;
+            return (
+              <div key={key} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e5e7eb' }}>
+                  {key}
+                </div>
+                {items.map((a) => {
+                  const isChecked = !!gridChecked[a.id];
+                  return (
+                    <div
+                      key={a.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 6,
+                        background: isChecked ? '#e8f9f7' : 'transparent',
+                        marginBottom: 2, cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                      onClick={() => {
+                        setGridChecked((prev) => {
+                          const next = { ...prev };
+                          if (next[a.id]) delete next[a.id];
+                          else next[a.id] = '1.0';
+                          return next;
+                        });
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488' }}
+                      />
+                      <span style={{ flex: 1, fontSize: 12, color: '#111827', fontWeight: isChecked ? 600 : 400, lineHeight: 1.3 }}>{a.name}</span>
+                      {isChecked && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="number"
-                            className="form-input"
-                            style={{ width: 80 }}
-                            min={0.1}
-                            max={targetVolume}
-                            step={0.1}
-                            value={e.volumeMl}
-                            onChange={(ev) => updateVolume(e.allergenId, parseFloat(ev.target.value) || 0)}
+                            value={gridChecked[a.id]}
+                            min={0.05}
+                            step={0.05}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setGridChecked((prev) => ({ ...prev, [a.id]: val }));
+                            }}
+                            style={{ width: 52, padding: '2px 4px', border: '1px solid #0d9488', borderRadius: 4, fontSize: 11, textAlign: 'right', background: '#f0fdfa' }}
                           />
-                        </td>
-                        <td>
-                          <button className="btn btn-danger btn-sm" onClick={() => removeAllergen(e.allergenId)}>✕</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                          <span style={{ fontSize: 10, color: '#6b7280' }}>mL</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
 
-            {/* Allergen picker modal */}
-            {showAllergenPicker && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setShowAllergenPicker(false)}>
-                <div style={{ background: '#fff', width: '100%', maxWidth: 480, maxHeight: '70vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0055a5' }}>
-                    <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Select Allergen</span>
-                    <button onClick={() => setShowAllergenPicker(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>×</button>
-                  </div>
-                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb' }}>
-                    <input type="text" className="form-input" placeholder="Search allergens…" value={allergenSearch} onChange={(e) => setAllergenSearch(e.target.value)} autoFocus />
-                  </div>
-                  <div style={{ overflowY: 'auto', flex: 1 }}>
-                    {filteredAllergens.length === 0 ? (
-                      <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No allergens found in library. Add allergens in the Allergens section first.</div>
-                    ) : (
-                      filteredAllergens.map((a) => {
-                        const already = mixEntries.some((e) => e.allergenId === a.id);
-                        return (
-                          <div key={a.id} onClick={() => !already && addAllergen(a)} style={{ padding: '9px 16px', borderBottom: '1px solid #f0f2f5', cursor: already ? 'not-allowed' : 'pointer', opacity: already ? 0.5 : 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} onMouseEnter={(e) => { if (!already) (e.currentTarget as HTMLDivElement).style.background = '#f0f7ff'; }} onMouseLeave={(e) => { if (!already) (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}>
-                            <div>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{a.name}</div>
-                              <div style={{ fontSize: 11, color: '#6b7280' }}>{a.type} · {a.stockConcentration || 'No conc.'}</div>
-                            </div>
-                            {already && <span style={{ fontSize: 11, color: '#9ca3af' }}>Added</span>}
-                          </div>
-                        );
-                      })
-                    )}
+          return (
+            <div>
+              {/* Safety warnings */}
+              {safetyWarnings.map((w, i) => (
+                <SafetyAlert key={i} level={w.level === 'error' ? 'danger' : 'warning'} message={w.message} />
+              ))}
+
+              {/* Pre-populated banner */}
+              {prePopulated && (
+                <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#2e7d32' }}>
+                  <span style={{ fontSize: 16 }}>🌿</span>
+                  <span><strong>Pre-populated from patient&apos;s allergen mix</strong> — adjust as needed</span>
+                </div>
+              )}
+
+              {/* Batch parameters */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="card" style={{ borderRadius: 14 }}>
+                  <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 12 }}>Batch Parameters</h4>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <div>
+                      <label className="form-label">Target Total Volume</label>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {TARGET_VOLUMES.map((v) => (
+                          <button key={v} type="button" onClick={() => setTargetVolume(v)} style={{ padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: targetVolume === v ? '#0055a5' : '#f9fafb', color: targetVolume === v ? '#fff' : '#374151', border: '1px solid #d1d5db', borderRadius: 8 }}>
+                            {v} mL
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="form-label">Glycerin % <span style={{ color: glycerinPct > 50 ? '#c62828' : glycerinPct > 40 ? '#f57c00' : '#9ca3af' }}>{glycerinPct > 50 ? '⛔ EXCEEDS LIMIT' : glycerinPct > 40 ? '⚠ Near limit' : ''}</span></label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <input type="range" min={0} max={60} value={glycerinPct} onChange={(e) => setGlycerinPct(Number(e.target.value))} style={{ width: 120 }} />
+                        <input type="number" className="form-input" style={{ width: 70, borderRadius: 10 }} min={0} max={60} value={glycerinPct} onChange={(e) => setGlycerinPct(Number(e.target.value))} />
+                        <span style={{ fontSize: 13, color: '#6b7280' }}>%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Volume meter */}
+                <div className="card" style={{ borderRadius: 14 }}>
+                  <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 12 }}>Volume Status</h4>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: totalMixVol > targetVolume ? '#c62828' : totalMixVol === targetVolume ? '#2e7d32' : '#0055a5' }}>
+                    {totalMixVol.toFixed(1)} / {targetVolume} mL
+                  </div>
+                  <div style={{ height: 8, background: '#f0f2f5', marginTop: 10, overflow: 'hidden', borderRadius: 4 }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, (totalMixVol / targetVolume) * 100)}%`, background: totalMixVol > targetVolume ? '#c62828' : totalMixVol === targetVolume ? '#2e7d32' : '#0055a5', transition: 'width 0.2s' }} />
+                  </div>
+                  {totalMixVol > targetVolume && <div style={{ fontSize: 11, color: '#c62828', marginTop: 6 }}>⛔ Exceeds target by {(totalMixVol - targetVolume).toFixed(1)} mL</div>}
+                  {totalMixVol < targetVolume && totalMixVol > 0 && <div style={{ fontSize: 11, color: '#f57c00', marginTop: 6 }}>⚠ {(targetVolume - totalMixVol).toFixed(1)} mL remaining</div>}
+                  {totalMixVol === targetVolume && totalMixVol > 0 && <div style={{ fontSize: 11, color: '#2e7d32', marginTop: 6 }}>✓ Target reached</div>}
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Allergen grid section */}
+              <div className="card" style={{ borderRadius: 14 }}>
+                {/* Top bar: counter + cross-reactivity warning */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #e5e7eb' }}>
+                  <div style={{ flex: 1, fontSize: 13, color: '#374151' }}>
+                    <span style={{ fontWeight: 700, color: '#0d9488' }}>{totalSelected}</span>
+                    <span style={{ color: '#6b7280' }}> allergens selected · </span>
+                    <span style={{ fontWeight: 700, color: '#0d9488' }}>{totalVolume.toFixed(1)}</span>
+                    <span style={{ color: '#6b7280' }}> mL total</span>
+                  </div>
+                  {hasMoldPollenWarning && (
+                    <div style={{ fontSize: 11, color: '#b45309', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      ⚠ Mold + Pollen cross-reactivity — verify with physician
+                    </div>
+                  )}
+                </div>
+
+                {/* 3-column allergen grid */}
+                {allergenOptions.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: '20px 0' }}>Loading allergens…</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+                    <div>{col1.map(renderGroup)}</div>
+                    <div>{col2.map(renderGroup)}</div>
+                    <div>{col3.map(renderGroup)}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── STEP 3: Vial Preview ── */}
         {step === 3 && (
@@ -559,7 +620,7 @@ export default function NewVialBatchPage() {
             <SafetyAlert level="warning" message="Verify all vial details before proceeding. Labels will be generated from this data." />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 }}>
               {vialPreviews.map((v) => (
-                <div key={v.vialNumber} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div key={v.vialNumber} className="card" style={{ padding: 0, overflow: 'hidden', borderRadius: 14 }}>
                   <div style={{ background: vialColorMap[v.colorCode]?.bg ?? '#f0f2f5', padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 700, fontSize: 13, color: vialColorMap[v.colorCode]?.text === '#fff' ? (vialColorMap[v.colorCode]?.bg ?? '#000') : '#1a1a2e' }}>
                       Vial #{v.vialNumber}
@@ -587,7 +648,7 @@ export default function NewVialBatchPage() {
                       <input
                         type="date"
                         className="form-input"
-                        style={{ fontSize: 12 }}
+                        style={{ fontSize: 12, borderRadius: 10 }}
                         value={v.expiresAt}
                         onChange={(e) => setVialPreviews((prev) => prev.map((vp) => vp.vialNumber === v.vialNumber ? { ...vp, expiresAt: e.target.value } : vp))}
                       />
@@ -603,7 +664,7 @@ export default function NewVialBatchPage() {
         {step === 4 && (
           <div>
             {submitError && (
-              <div style={{ background: '#ffebee', color: '#c62828', padding: '10px 14px', marginBottom: 16, fontSize: 13, border: '1px solid #ef9a9a' }}>{submitError}</div>
+              <div style={{ background: '#ffebee', color: '#c62828', padding: '10px 14px', marginBottom: 16, fontSize: 13, border: '1px solid #ef9a9a', borderRadius: 10 }}>{submitError}</div>
             )}
             {safetyWarnings.map((w, i) => (
               <SafetyAlert key={i} level={w.level === 'error' ? 'danger' : 'warning'} message={w.message} />
@@ -611,7 +672,7 @@ export default function NewVialBatchPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               {/* Summary card */}
-              <div className="card">
+              <div className="card" style={{ borderRadius: 14 }}>
                 <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>Batch Summary</h4>
                 {[
                   ['Patient', selectedPatient ? `${selectedPatient.name} (${selectedPatient.patientId})` : '—'],
@@ -632,7 +693,7 @@ export default function NewVialBatchPage() {
               </div>
 
               {/* Allergen list */}
-              <div className="card">
+              <div className="card" style={{ borderRadius: 14 }}>
                 <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#6b7280', letterSpacing: '0.05em', marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>Allergen Mix</h4>
                 {mixEntries.map((e) => (
                   <div key={e.allergenId} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #f0f2f5', fontSize: 13 }}>
@@ -645,7 +706,7 @@ export default function NewVialBatchPage() {
                   <span style={{ color: totalMixVol === targetVolume ? '#2e7d32' : '#c62828' }}>{totalMixVol.toFixed(1)} / {targetVolume} mL</span>
                 </div>
                 {notes && (
-                  <div style={{ marginTop: 10, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', fontSize: 12, color: '#4b5563' }}>📝 {notes}</div>
+                  <div style={{ marginTop: 10, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', fontSize: 12, color: '#4b5563', borderRadius: 8 }}>📝 {notes}</div>
                 )}
               </div>
             </div>
@@ -669,7 +730,7 @@ export default function NewVialBatchPage() {
 
         {/* Navigation buttons */}
         {stepError && (
-          <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '10px 14px', marginTop: 12, fontSize: 13, border: '1px solid #fecaca' }}>
+          <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '10px 14px', marginTop: 12, fontSize: 13, border: '1px solid #fecaca', borderRadius: 10 }}>
             {stepError}
           </div>
         )}
