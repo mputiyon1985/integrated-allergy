@@ -39,7 +39,7 @@ export async function signTempJWT(payload: TempTokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('10m')
+    .setExpirationTime('30m')
     .sign(JWT_SECRET);
 }
 
