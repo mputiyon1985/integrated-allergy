@@ -1959,6 +1959,37 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
           </div>
         </div>
       )}
+      {/* MFA Reset Confirmation Modal */}
+      {confirmResetMfa && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 }}>
+          <div style={{ background: '#fff', width: 400, borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', padding: 24 }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700 }}>🔐 Reset MFA?</h3>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#374151' }}>
+              Reset MFA for <strong>{confirmResetMfa.name}</strong>? They will need to re-scan on next login.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setConfirmResetMfa(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ background: '#1d4ed8', borderColor: '#1d4ed8' }}
+                onClick={() => handleResetMfa(confirmResetMfa)}
+                disabled={resettingMfa === confirmResetMfa.id}>
+                {resettingMfa === confirmResetMfa.id ? 'Resetting…' : 'Yes, Reset MFA'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Toast notification */}
+      {mfaResetToast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 1400,
+          background: '#059669', color: '#fff', padding: '12px 20px',
+          borderRadius: 10, fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          ✅ {mfaResetToast}
+        </div>
+      )}
     </SettingsTile>
   );
 }
