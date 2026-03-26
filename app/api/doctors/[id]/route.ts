@@ -44,6 +44,7 @@ export async function PUT(
       phone?: string;
       clinicLocation?: string;
       npi?: string;
+      photoUrl?: string;
       active?: boolean;
     };
 
@@ -62,6 +63,7 @@ export async function PUT(
         ...(body.phone !== undefined && { phone: body.phone?.trim() || null }),
         ...(body.clinicLocation !== undefined && { clinicLocation: body.clinicLocation?.trim() || null }),
         ...(body.npi !== undefined && { npi: body.npi?.trim() || null }),
+        ...(body.photoUrl !== undefined && { photoUrl: body.photoUrl || null }),
         ...(body.active !== undefined && { active: body.active }),
       },
     });

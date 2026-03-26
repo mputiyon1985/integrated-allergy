@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       phone?: string;
       clinicLocation?: string;
       npi?: string;
+      photoUrl?: string;
     };
 
     if (!body.name || body.name.trim() === '') {
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
         phone: body.phone?.trim() || null,
         clinicLocation: body.clinicLocation?.trim() || null,
         npi: body.npi?.trim() || null,
+        photoUrl: body.photoUrl || null,
       },
     });
 
