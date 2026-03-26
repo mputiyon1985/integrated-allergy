@@ -89,8 +89,8 @@ export default function DosingPage() {
   return (
     <>
       <TopBar
-        title="Dosing Schedule"
-        breadcrumbs={[{ label: 'Integrated Allergy IMS' }, { label: 'Dosing' }]}
+        title="Today's Doses"
+        breadcrumbs={[{ label: 'Integrated Allergy IMS' }, { label: "Today's Doses" }]}
         actions={<button className="btn btn-primary">+ Record Dose</button>}
       />
       <div className="page-content">

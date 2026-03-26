@@ -7,7 +7,6 @@ import TopBar from '@/components/layout/TopBar';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import type { DashboardStats, KpiDef } from '@/components/dashboard/types';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
-import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
 // Dynamically imported so react-grid-layout (and its useContainerWidth hook)
 // only runs on the client — avoids SSR issues.
@@ -26,21 +25,6 @@ const MOCK_STATS: DashboardStats = {
   evalsToday: 0,
   activeDoctors: 0,
   activeNurses: 0,
-};
-
-const typeColors: Record<string, string> = {
-  'Dose Administered':   '#0055a5',
-  'Vials Generated':     '#2e7d32',
-  'Patient Created':     '#6a1b9a',
-  'Patient Added':       '#6a1b9a',
-  'Reaction Recorded':   '#c62828',
-  'Vial Expiry Alert':   '#f57c00',
-  'Allergen Updated':    '#00695c',
-  'Allergen Added':      '#00695c',
-  'Patient Updated':     '#1565c0',
-  'Appointment Created': '#0097a7',
-  'Appointment Updated': '#0097a7',
-  'vial_batch_created':  '#2e7d32',
 };
 
 // --- Layout persistence ---
@@ -189,19 +173,9 @@ const KPI_DEFS: KpiDef[] = [
   },
 ];
 
-interface ActivityItem {
-  id: string;
-  timestamp: string;
-  type: string;
-  patient: string;
-  details: string;
-  user: string;
-}
-
 export default function DashboardPage() {
-  const [stats, setStats]       = useState<DashboardStats | null>(null);
-  const [activity, setActivity] = useState<ActivityItem[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [stats, setStats]     = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [layouts, setLayouts]   = useState<ResponsiveLayouts>(() => loadLayout());
   const [mounted, setMounted]   = useState(false);
@@ -217,7 +191,6 @@ export default function DashboardPage() {
         if (res && res.ok) {
           const data = await res.json();
           setStats(data.stats ?? MOCK_STATS);
-          setActivity(data.activity ?? []);
         } else {
           setStats(MOCK_STATS);
         }
@@ -289,35 +262,11 @@ export default function DashboardPage() {
 
       <div className="page-content">
         {loading && (
-          <>
-            {/* KPI skeleton grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-              {Array.from({ length: 9 }).map((_, i) => (
-                <SkeletonCard key={i} height={110} />
-              ))}
-            </div>
-            {/* Recent activity skeleton */}
-            <div className="card" style={{ padding: 0 }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ height: 14, width: 120, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
-                <div style={{ height: 11, width: 60, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'skeleton-shimmer 1.5s infinite', borderRadius: 4 }} />
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="clinical-table">
-                  <thead>
-                    <tr>
-                      <th>Timestamp</th><th>Type</th><th>Patient</th><th>Details</th><th>User</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <SkeletonRow key={i} cols={5} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+            {Array.from({ length: 9 }).map((_, i) => (
+              <SkeletonCard key={i} height={110} />
+            ))}
+          </div>
         )}
 
         {!loading && stats && (
@@ -389,76 +338,6 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Recent Activity — stays below grid, not draggable */}
-            <div className="card" style={{ padding: 0 }}>
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #d1d5db',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>
-                  Recent Activity
-                </h2>
-                <span style={{ fontSize: 11, color: '#6b7280' }}>{activity.length} events</span>
-              </div>
-              {activity.length === 0 ? (
-                <div
-                  style={{ padding: '32px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}
-                >
-                  No activity yet — create patients and appointments to see events here.
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="clinical-table">
-                    <thead>
-                      <tr>
-                        <th>Timestamp</th>
-                        <th>Type</th>
-                        <th>Patient</th>
-                        <th>Details</th>
-                        <th>User</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activity.map((item) => (
-                        <tr key={item.id}>
-                          <td
-                            style={{
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                              whiteSpace: 'nowrap',
-                              color: '#6b7280',
-                            }}
-                          >
-                            {item.timestamp}
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: typeColors[item.type] || '#374151',
-                                background: `${typeColors[item.type] || '#374151'}15`,
-                                padding: '2px 7px',
-                              }}
-                            >
-                              {item.type}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 500 }}>{item.patient}</td>
-                          <td style={{ color: '#4b5563', fontSize: 12 }}>{item.details}</td>
-                          <td style={{ color: '#6b7280', fontSize: 12 }}>{item.user}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </>
         )}
       </div>

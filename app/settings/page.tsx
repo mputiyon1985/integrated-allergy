@@ -42,7 +42,7 @@ interface TitleRow { id: string; name: string; active: boolean; }
 type TileId =
   | 'branding' | 'notifications' | 'appearance' | 'clinic' | 'security' | 'export'
   | 'diagnoses' | 'doctor-titles' | 'nurse-titles'
-  | 'entities' | 'entity-locations' | 'users';
+  | 'entities' | 'entity-locations' | 'users' | 'audit-log';
 
 // ─── Layout persistence ───────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ const LAYOUT_KEY = 'ia-settings-layout-v3';
 const ALL_TILE_IDS: TileId[] = [
   'branding', 'notifications', 'appearance', 'clinic', 'security', 'export',
   'diagnoses', 'doctor-titles', 'nurse-titles',
-  'entities', 'entity-locations', 'users',
+  'entities', 'entity-locations', 'users', 'audit-log',
 ];
 
 function makeDefaultLayouts(ids: TileId[]): ResponsiveLayouts {
@@ -373,8 +373,10 @@ export default function SettingsPage() {
       setDoctors((d as { doctors: Doctor[] }).doctors ?? []);
       const role = (me as { user?: { role: string } } | null)?.user?.role ?? null;
       setUserRole(role);
-      // Include 'users' tile only for super_admin
-      const ids = role === 'super_admin' ? ALL_TILE_IDS : ALL_TILE_IDS.filter((id) => id !== 'users');
+      // Include 'users' and 'audit-log' tiles only for super_admin
+      const ids = role === 'super_admin'
+        ? ALL_TILE_IDS
+        : ALL_TILE_IDS.filter((id) => id !== 'users' && id !== 'audit-log');
       setTileIds(ids);
       setLayouts(loadLayouts(ids));
       setLoading(false);
@@ -461,6 +463,10 @@ export default function SettingsPage() {
     ...(userRole === 'super_admin' ? [{
       id: 'users' as TileId,
       node: <UsersTile {...tileProps('users')} />,
+    }] : []),
+    ...(userRole === 'super_admin' ? [{
+      id: 'audit-log' as TileId,
+      node: <AuditLogTile {...tileProps('audit-log')} />,
     }] : []),
   ];
 
@@ -2008,6 +2014,106 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
           ✅ {mfaResetToast}
+        </div>
+      )}
+    </SettingsTile>
+  );
+}
+
+// ─── TILE: Audit Log (super_admin only) ───────────────────────────────────────
+
+interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  userId: string | null;
+  userName: string | null;
+  details: string | null;
+}
+
+function AuditLogTile({ open, onToggle, editMode }: { open: boolean; onToggle: () => void; editMode: boolean }) {
+  const [entries, setEntries] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/audit-log?limit=100');
+      const data = await res.json() as { logs?: AuditLogEntry[]; entries?: AuditLogEntry[] };
+      setEntries(data.logs ?? data.entries ?? []);
+    } catch { setEntries([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { if (open) load(); }, [open, load]);
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/export/audit-log');
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    } catch { alert('Export failed'); }
+    finally { setExporting(false); }
+  };
+
+  return (
+    <SettingsTile id="audit-log" icon="📋" title="Audit Log" editMode={editMode}
+      description="Last 100 system events — super admin only" open={open} onToggle={onToggle}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button
+          className="btn btn-secondary"
+          style={{ fontSize: 12, padding: '4px 14px' }}
+          onClick={handleExportCsv}
+          disabled={exporting}
+        >
+          {exporting ? '⏳ Exporting…' : '⬇ Export CSV'}
+        </button>
+      </div>
+      {loading ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>⏳ Loading…</div>
+      ) : entries.length === 0 ? (
+        <div style={{ color: '#9ca3af', fontSize: 13, padding: '12px 0' }}>No audit events recorded yet.</div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                {['Timestamp', 'Action', 'Entity', 'User', 'Details'].map((h) => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr key={entry.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ ...tdStyle, fontFamily: 'monospace', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#0d9488', background: '#e8f9f7', padding: '2px 7px', borderRadius: 6 }}>
+                      {entry.action}
+                    </span>
+                  </td>
+                  <td style={{ ...tdStyle, color: '#6b7280' }}>
+                    {entry.entityType ?? '—'}
+                    {entry.entityId ? <span style={{ color: '#9ca3af', fontSize: 10, marginLeft: 4 }}>#{entry.entityId.slice(0, 6)}</span> : null}
+                  </td>
+                  <td style={{ ...tdStyle, color: '#374151' }}>{entry.userName ?? entry.userId ?? '—'}</td>
+                  <td style={{ ...tdStyle, color: '#4b5563', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {entry.details ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </SettingsTile>
