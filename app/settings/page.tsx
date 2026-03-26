@@ -31,6 +31,7 @@ interface Settings {
   session_timeout?: string;
   require_confirm_delete?: string;
   audit_log_public?: string;
+  mfa_required?: string;
 }
 
 interface Doctor { id: string; name: string; title: string; }
@@ -784,6 +785,7 @@ function SecurityTile({ open, onToggle, editMode, settings, onSettingsChange }: 
   const [sessionTimeout, setSessionTimeout] = useState('60');
   const [requireConfirm, setRequireConfirm] = useState(true);
   const [auditPublic, setAuditPublic]       = useState(false);
+  const [mfaRequired, setMfaRequired]       = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
   const [error, setError]   = useState<string | null>(null);
@@ -792,6 +794,7 @@ function SecurityTile({ open, onToggle, editMode, settings, onSettingsChange }: 
     setSessionTimeout(settings.session_timeout ?? '60');
     setRequireConfirm((settings.require_confirm_delete ?? 'true') === 'true');
     setAuditPublic((settings.audit_log_public ?? 'false') === 'true');
+    setMfaRequired((settings.mfa_required ?? 'true') !== 'false');
   }, [settings]);
 
   const handleSave = async () => {
@@ -801,6 +804,7 @@ function SecurityTile({ open, onToggle, editMode, settings, onSettingsChange }: 
         session_timeout: sessionTimeout,
         require_confirm_delete: String(requireConfirm),
         audit_log_public: String(auditPublic),
+        mfa_required: String(mfaRequired),
       };
       await saveSettings(patch);
       onSettingsChange({ ...settings, ...patch });
@@ -811,7 +815,7 @@ function SecurityTile({ open, onToggle, editMode, settings, onSettingsChange }: 
 
   return (
     <SettingsTile id="security" icon="🔒" title="Security & Access" editMode={editMode}
-      description="Session timeout, delete confirmation, audit visibility" open={open} onToggle={onToggle}>
+      description="Session timeout, MFA, delete confirmation, audit visibility" open={open} onToggle={onToggle}>
       <div style={{ display: 'grid', gap: 16 }}>
         <div>
           <Label>Session Timeout</Label>
@@ -821,6 +825,14 @@ function SecurityTile({ open, onToggle, editMode, settings, onSettingsChange }: 
             <option value="120">2 hours</option>
             <option value="never">Never</option>
           </select>
+        </div>
+        <div>
+          <Toggle checked={mfaRequired} onChange={setMfaRequired} label="Require MFA for all users" />
+          {!mfaRequired && (
+            <div style={{ marginTop: 6, fontSize: 12, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px' }}>
+              ⚠️ MFA is disabled — users can log in without two-factor authentication. Enable for production.
+            </div>
+          )}
         </div>
         <Toggle checked={requireConfirm} onChange={setRequireConfirm} label="Require confirmation before deleting records" />
         <Toggle checked={auditPublic} onChange={setAuditPublic} label="Show audit log to all users" />
@@ -1656,6 +1668,9 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
   const [deleting, setDeleting] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; tempPassword: string; doctorName?: string | null } | null>(null);
+  const [confirmResetMfa, setConfirmResetMfa] = useState<UserRow | null>(null);
+  const [resettingMfa, setResettingMfa] = useState<string | null>(null);
+  const [mfaResetToast, setMfaResetToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1689,7 +1704,7 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
 
   const openEdit = (user: UserRow) => {
     setEditing(user);
-    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active, doctorId: '', nurseId: '' });
+    setForm({ name: user.name, email: user.email, password: '', role: user.role, entityId: user.entityId ?? '', locationIds: user.locationIds, active: user.active, doctorId: (user as any).doctorId ?? '', nurseId: (user as any).nurseId ?? '' });
     setImportValue(''); setFormError(null); setShowModal(true);
   };
 
@@ -1760,6 +1775,21 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
     finally { setDeleting(null); }
   };
 
+  const handleResetMfa = async (user: UserRow) => {
+    setResettingMfa(user.id);
+    try {
+      const res = await fetch(`/api/users/${user.id}/reset-mfa`, { method: 'POST' });
+      if (res.ok) {
+        setMfaResetToast('MFA reset — user will set up fresh on next login');
+        setTimeout(() => setMfaResetToast(null), 4000);
+        load();
+      } else {
+        alert('Failed to reset MFA');
+      }
+    } catch { alert('Network error resetting MFA'); }
+    finally { setResettingMfa(null); setConfirmResetMfa(null); }
+  };
+
   return (
     <SettingsTile id="users" icon="👤" title="Users" editMode={editMode}
       description="System users, roles, and access (super admin only)" open={open} onToggle={onToggle}>
@@ -1802,9 +1832,12 @@ function UsersTile({ open, onToggle, editMode }: { open: boolean; onToggle: () =
                     </span>
                   </td>
                   <td style={tdStyle} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: user.active ? '#fff7ed' : '#f0fdf4', color: user.active ? '#c2410c' : '#15803d', border: `1px solid ${user.active ? '#fed7aa' : '#bbf7d0'}` }} onClick={() => handleToggle(user)}>
                         {user.active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }} onClick={() => setConfirmResetMfa(user)} disabled={resettingMfa === user.id} title="Reset MFA — user will re-enroll on next login">
+                        🔐 Reset MFA
                       </button>
                       <button className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }} onClick={() => handleDelete(user)} disabled={deleting === user.id}>
                         {deleting === user.id ? '…' : 'Del'}

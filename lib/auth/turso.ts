@@ -143,6 +143,12 @@ export async function setMfaSecret(userId: string, secret: string): Promise<void
   );
 }
 
+export async function getSettings(): Promise<Record<string, string>> {
+  const result = await tursoQuery('SELECT key, value FROM Settings');
+  const rows = rowToObject(result);
+  return Object.fromEntries(rows.map((r) => [r.key as string, r.value as string]));
+}
+
 export async function createUser(user: {
   id: string;
   email: string;

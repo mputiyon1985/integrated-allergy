@@ -38,6 +38,8 @@ export async function GET(req: NextRequest) {
       active: u.active,
       mfaEnabled: u.mfaEnabled,
       createdAt: u.createdAt,
+      doctorId: u.doctorId ?? null,
+      nurseId: u.nurseId ?? null,
     }));
 
     return NextResponse.json({ users: result });
