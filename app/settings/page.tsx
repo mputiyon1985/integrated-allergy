@@ -441,12 +441,20 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <DraggableSettingsGrid
-          tiles={tiles}
-          layouts={layouts}
-          editMode={editMode}
-          onLayoutChange={handleLayoutChange}
-        />
+        {editMode ? (
+          <DraggableSettingsGrid
+            tiles={tiles}
+            layouts={layouts}
+            editMode={true}
+            onLayoutChange={handleLayoutChange}
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+            {tiles.map(tile => (
+              <div key={tile.id} style={{ width: '100%' }}>{tile.node}</div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
