@@ -179,9 +179,11 @@ export default function DashboardPage() {
   const [editMode, setEditMode] = useState(false);
   const [layouts, setLayouts]   = useState<ResponsiveLayouts>(() => loadLayout());
   const [mounted, setMounted]   = useState(false);
+  const [userRole, setUserRole]   = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    fetch('/api/auth/me').then(r => r.json()).then(d => setUserRole(d?.user?.role ?? null)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -220,7 +222,7 @@ export default function DashboardPage() {
         breadcrumbs={[{ label: 'Integrated Allergy IMS' }, { label: 'Dashboard' }]}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {editMode && (
+            {editMode && userRole === 'super_admin' && (
               <button
                 onClick={handleReset}
                 style={{
@@ -237,22 +239,24 @@ export default function DashboardPage() {
                 ↺ Reset Layout
               </button>
             )}
-            <button
-              onClick={() => setEditMode((e) => !e)}
-              style={{
-                fontSize: 12,
-                padding: '4px 12px',
-                background: editMode ? '#F59E0B' : '#fff',
-                border: `1px solid ${editMode ? '#F59E0B' : '#d1d5db'}`,
-                borderRadius: 6,
-                cursor: 'pointer',
-                color: editMode ? '#fff' : '#374151',
-                fontWeight: 600,
-                transition: 'all 0.15s',
-              }}
-            >
-              ✏️ {editMode ? 'Done Editing' : 'Edit Layout'}
-            </button>
+            {userRole === 'super_admin' && (
+              <button
+                onClick={() => setEditMode((e) => !e)}
+                style={{
+                  fontSize: 12,
+                  padding: '4px 12px',
+                  background: editMode ? '#F59E0B' : '#fff',
+                  border: `1px solid ${editMode ? '#F59E0B' : '#d1d5db'}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  color: editMode ? '#fff' : '#374151',
+                  fontWeight: 600,
+                  transition: 'all 0.15s',
+                }}
+              >
+                ✏️ {editMode ? 'Done Editing' : 'Edit Layout'}
+              </button>
+            )}
             <span style={{ fontSize: 12, color: '#6b7280' }}>
               Last updated: {new Date().toLocaleTimeString()}
             </span>
@@ -271,7 +275,7 @@ export default function DashboardPage() {
 
         {!loading && stats && (
           <>
-            {editMode && (
+            {editMode && userRole === 'super_admin' && (
               <div
                 style={{
                   marginBottom: 12,
