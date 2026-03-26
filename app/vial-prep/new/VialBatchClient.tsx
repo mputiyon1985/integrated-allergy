@@ -388,7 +388,7 @@ export default function NewVialBatchPage() {
                   <select className="form-input" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)}>
                     <option value="">Select nurse…</option>
                     {nurses.map((n) => (
-                      <option key={n.id} value={`${n.title} ${n.name}`}>{n.title} {n.name}</option>
+                      <option key={n.id} value={`${n.name}, ${n.title}`}>{n.name}, {n.title}</option>
                     ))}
                   </select>
                 ) : (
@@ -404,7 +404,7 @@ export default function NewVialBatchPage() {
                   <select className="form-input" value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)}>
                     <option value="">Select nurse… (recommended: different from Prepared By)</option>
                     {nurses.map((n) => (
-                      <option key={n.id} value={`${n.title} ${n.name}`}>{n.title} {n.name}</option>
+                      <option key={n.id} value={`${n.name}, ${n.title}`}>{n.name}, {n.title}</option>
                     ))}
                   </select>
                 ) : (

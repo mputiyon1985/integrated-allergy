@@ -450,12 +450,12 @@ export default function CalendarPage() {
                   )}
                   {doctors.length > 0 && (
                     <optgroup label="Doctors">
-                      {doctors.map((d) => <option key={d.id} value={`${d.title} ${d.name}`}>{d.title} {d.name}</option>)}
+                      {doctors.map((d) => <option key={d.id} value={`${d.name}, ${d.title}`}>{d.name}, {d.title}</option>)}
                     </optgroup>
                   )}
                   {nurses.length > 0 && (
                     <optgroup label="Nurses">
-                      {nurses.map((n) => <option key={n.id} value={`${n.title} ${n.name}`}>{n.title} {n.name}</option>)}
+                      {nurses.map((n) => <option key={n.id} value={`${n.name}, ${n.title}`}>{n.name}, {n.title}</option>)}
                     </optgroup>
                   )}
                 </select>
