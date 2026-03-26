@@ -119,12 +119,22 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Clinic branding */}
-      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid #2d3f5e' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <img src="/integrated-allergy-logo.png" alt="Integrated Allergy" style={{ height: 40, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-            <div style={{ color: '#8a9bbf', fontSize: 10, marginTop: 3 }}>IMS v2.0 · © 2026</div>
-          </div>
+      <div style={{ padding: '14px 16px 14px', borderBottom: '1px solid #2d3f5e', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <img
+            src="/integrated-allergy-logo.png"
+            alt="Integrated Allergy"
+            style={{
+              width: '100%',
+              maxWidth: 180,
+              height: 'auto',
+              objectFit: 'contain',
+              objectPosition: 'left center',
+              display: 'block',
+              filter: 'brightness(0) invert(1)',
+            }}
+          />
+          <div style={{ color: '#8a9bbf', fontSize: 10 }}>IMS v2.0 · © 2026</div>
         </div>
       </div>
 
