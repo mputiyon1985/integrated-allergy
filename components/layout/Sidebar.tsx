@@ -119,8 +119,8 @@ export default function Sidebar() {
   return (
     <aside className="sidebar" style={{ borderTop: '4px solid #2ec4b6', background: '#ffffff' }}>
       {/* Clinic branding */}
-      <div style={{ padding: '12px 0px 12px 0px', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ padding: '12px 0px 12px 0px', marginLeft: -4, borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginLeft: -8 }}>
           <img
             src="/integrated-allergy-logo.jpg"
             alt="Integrated Allergy"
