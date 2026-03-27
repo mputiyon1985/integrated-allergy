@@ -3,6 +3,8 @@ import speakeasy from 'speakeasy';
 import { verifyJWT, setSessionCookie, TempTokenPayload, UserContext } from '@/lib/auth/session';
 import { getUserById, getUserLocationIds, getDoctorById, getNurseById } from '@/lib/auth/turso';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { tempToken, code } = await req.json();

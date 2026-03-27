@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { getUserByEmail, getUserLocationIds, getDoctorById, getNurseById, getSettings } from '@/lib/auth/turso';
 import { signTempJWT, setSessionCookie, UserContext } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();

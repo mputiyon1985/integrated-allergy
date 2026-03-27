@@ -157,8 +157,8 @@ export default function PatientDetailPage() {
   // Edit-allergen mode: if set, picker is editing an existing mix row
   const [editingMixId, setEditingMixId] = useState<string | null>(null);
   // Remove confirm dialog
-  const [removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
-  const [removing, setRemoving] = useState(false);
+  const [_removeConfirm, setRemoveConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [_removing, setRemoving] = useState(false);
 
   // ── Inline allergen grid state ───────────────────────────────────────────────
   // gridChecked: allergenId → volume string (checked = in selection)
@@ -293,7 +293,7 @@ export default function PatientDetailPage() {
   };
 
   // ── Open picker to edit an existing allergen row ───────────────────────────
-  const openEditAllergen = (a: AllergenMixItem) => {
+  const _openEditAllergen = (a: AllergenMixItem) => {
     setEditingMixId(a.id);
     // Pre-check only that one allergen with its current volume
     setSelectedAllergens({ [a.id]: String(a.volume) });
@@ -303,7 +303,7 @@ export default function PatientDetailPage() {
   };
 
   // ── Save edited volume via PATCH ────────────────────────────────────────────
-  const handleSaveEditAllergen = async () => {
+  const _handleSaveEditAllergen = async () => {
     if (!editingMixId) return;
     const entry = Object.entries(selectedAllergens)[0];
     if (!entry) return;
@@ -335,7 +335,7 @@ export default function PatientDetailPage() {
   };
 
   // ── Soft-delete allergen from mix ───────────────────────────────────────────
-  const handleRemoveAllergen = async (mixId: string) => {
+  const _handleRemoveAllergen = async (mixId: string) => {
     setRemoving(true);
     try {
       const res = await fetch(`/api/patients/${patientDbId}/allergens/${mixId}`, { method: 'DELETE' });

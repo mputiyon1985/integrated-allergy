@@ -4,6 +4,8 @@ import QRCode from 'qrcode';
 import { verifyJWT, setSessionCookie, TempTokenPayload, UserContext } from '@/lib/auth/session';
 import { getUserById, getUserLocationIds, setMfaSecret, getDoctorById, getNurseById } from '@/lib/auth/turso';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/auth/mfa-setup — generate TOTP secret + QR code
 export async function GET(req: NextRequest) {
   try {
