@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import TopBar from '@/components/layout/TopBar';
@@ -410,71 +410,51 @@ export default function SettingsPage() {
     );
   }
 
-  const tileProps = (id: TileId) => ({
-    id, open: openTile === id, onToggle: () => toggleTile(id), editMode,
-  });
+  // Memoize tile content WITHOUT open/onToggle — those are passed dynamically at render time.
+  // This prevents tile components from re-mounting every time openTile state changes,
+  // which was causing their useEffect/load() to re-fire and close the accordion.
+  const tileComponents = useMemo<Partial<Record<TileId, React.ReactNode>>>(() => ({
+    branding: <BrandingTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
+    notifications: <NotificationsTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
+    appearance: <AppearanceTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
+    clinic: <ClinicDefaultsTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} doctors={doctors} />,
+    security: <SecurityTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
+    export: <ExportTile open={false} onToggle={() => {}} editMode={editMode} />,
+    diagnoses: <DiagnosesTile open={false} onToggle={() => {}} editMode={editMode} />,
+    'doctor-titles': <DoctorTitlesTile open={false} onToggle={() => {}} editMode={editMode} />,
+    'nurse-titles': <NurseTitlesTile open={false} onToggle={() => {}} editMode={editMode} />,
+    allergens: <AllergensTile open={false} onToggle={() => {}} editMode={editMode} />,
+    entities: <EntitiesTile open={false} onToggle={() => {}} editMode={editMode} />,
+    'entity-locations': <EntityLocationsTile open={false} onToggle={() => {}} editMode={editMode} />,
+    ...(userRole === 'super_admin' ? {
+      users: <UsersTile open={false} onToggle={() => {}} editMode={editMode} />,
+      'audit-log': <AuditLogTile open={false} onToggle={() => {}} editMode={editMode} />,
+    } : {}),
+  }), [settings, doctors, userRole, editMode]);
 
-  const allTileNodes: { id: TileId; node: React.ReactNode }[] = [
-    {
-      id: 'branding' as TileId,
-      node: <BrandingTile {...tileProps('branding')} settings={settings} onSettingsChange={setSettings} />,
-    },
-    {
-      id: 'notifications' as TileId,
-      node: <NotificationsTile {...tileProps('notifications')} settings={settings} onSettingsChange={setSettings} />,
-    },
-    {
-      id: 'appearance' as TileId,
-      node: <AppearanceTile {...tileProps('appearance')} settings={settings} onSettingsChange={setSettings} />,
-    },
-    {
-      id: 'clinic' as TileId,
-      node: <ClinicDefaultsTile {...tileProps('clinic')} settings={settings} onSettingsChange={setSettings} doctors={doctors} />,
-    },
-    {
-      id: 'security' as TileId,
-      node: <SecurityTile {...tileProps('security')} settings={settings} onSettingsChange={setSettings} />,
-    },
-    {
-      id: 'export' as TileId,
-      node: <ExportTile {...tileProps('export')} />,
-    },
 
-    {
-      id: 'diagnoses' as TileId,
-      node: <DiagnosesTile {...tileProps('diagnoses')} />,
-    },
-    {
-      id: 'doctor-titles' as TileId,
-      node: <DoctorTitlesTile {...tileProps('doctor-titles')} />,
-    },
-    {
-      id: 'nurse-titles' as TileId,
-      node: <NurseTitlesTile {...tileProps('nurse-titles')} />,
-    },
-    {
-      id: 'allergens' as TileId,
-      node: <AllergensTile {...tileProps('allergens')} />,
-    },
-    {
-      id: 'entities' as TileId,
-      node: <EntitiesTile {...tileProps('entities')} />,
-    },
-    {
-      id: 'entity-locations' as TileId,
-      node: <EntityLocationsTile {...tileProps('entity-locations')} />,
-    },
-    ...(userRole === 'super_admin' ? [{
-      id: 'users' as TileId,
-      node: <UsersTile {...tileProps('users')} />,
-    }] : []),
-    ...(userRole === 'super_admin' ? [{
-      id: 'audit-log' as TileId,
-      node: <AuditLogTile {...tileProps('audit-log')} />,
-    }] : []),
-  ];
+  const TILE_META: Record<TileId, { icon: string; title: string; desc: string }> = {
+    branding: { icon: '🏷️', title: 'Title & Branding', desc: 'Clinic name, app title, tagline' },
+    notifications: { icon: '🔔', title: 'Notifications', desc: 'Alert email and expiry settings' },
+    appearance: { icon: '🎨', title: 'Appearance', desc: 'Colors, sidebar style, date format' },
+    clinic: { icon: '👥', title: 'Clinic Defaults', desc: 'Default physician, vial expiry, glycerin %' },
+    security: { icon: '🔒', title: 'Security & Access', desc: 'Session timeout, MFA, confirmations' },
+    export: { icon: '📊', title: 'Data & Export', desc: 'CSV exports and JSON backup' },
+    diagnoses: { icon: '🩺', title: 'Diagnosis Options', desc: 'Manage diagnosis dropdown options' },
+    'doctor-titles': { icon: '👨‍⚕️', title: 'Doctor Titles', desc: 'MD, DO, NP, PA and custom titles' },
+    'nurse-titles': { icon: '👩‍⚕️', title: 'Nurse Titles', desc: 'RN, LPN, CMA and custom titles' },
+    allergens: { icon: '🌿', title: 'Allergens', desc: 'Manage the allergen library' },
+    entities: { icon: '🏢', title: 'Business Entities', desc: 'Manage business entities' },
+    'entity-locations': { icon: '📍', title: 'Clinic Locations', desc: 'Manage locations linked to entities' },
+    users: { icon: '👤', title: 'Users', desc: 'Manage login accounts and permissions' },
+    'audit-log': { icon: '📋', title: 'Audit Log', desc: 'System activity and compliance log' },
+  };
 
-  const tiles = allTileNodes.filter((t) => tileIds.includes(t.id));
+  const tiles = tileIds.filter((id) => tileComponents[id]);
+  const draggableTiles = tiles.map(id => ({
+    id,
+    node: tileComponents[id] ?? null,
+  }));
 
   return (
     <>
@@ -515,18 +495,31 @@ export default function SettingsPage() {
 
         {editMode ? (
           <DraggableSettingsGrid
-            tiles={tiles}
+            tiles={draggableTiles}
             layouts={layouts}
             editMode={true}
             onLayoutChange={handleLayoutChange}
           />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%' }}>
-            {tiles.map(tile => (
-              <div key={tile.id} style={{ width: '100%' }}>
-                {tile.node}
-              </div>
-            ))}
+            {tiles.map(id => {
+              const meta = TILE_META[id];
+              if (!meta) return null;
+              return (
+                <SettingsTile
+                  key={id}
+                  id={id}
+                  icon={meta.icon}
+                  title={meta.title}
+                  description={meta.desc}
+                  open={openTile === id}
+                  onToggle={() => toggleTile(id)}
+                  editMode={editMode}
+                >
+                  {tileComponents[id]}
+                </SettingsTile>
+              );
+            })}
           </div>
         )}
       </div>
