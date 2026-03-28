@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import { SkeletonRow } from '@/components/ui/SkeletonRow';
 
@@ -28,6 +28,7 @@ export default function DosingPage() {
   const [rows, setRows]           = useState<DosingRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [filterPatient, setFilterPatient] = useState('');
+  const [administeringId, setAdministeringId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -83,6 +84,28 @@ export default function DosingPage() {
     load();
   }, []);
 
+  const handleAdminister = useCallback(async (row: DosingRow) => {
+    if (row.status === 'Completed') return;
+    setAdministeringId(row.id);
+    // Optimistic update
+    setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, status: 'Completed' } : r));
+    try {
+      const res = await fetch(`/api/patients/${row.patientId}/schedule/${row.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ administered: true }),
+      });
+      if (!res.ok) {
+        // Revert on failure
+        setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, status: 'Scheduled' } : r));
+      }
+    } catch {
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, status: 'Scheduled' } : r));
+    } finally {
+      setAdministeringId(null);
+    }
+  }, []);
+
   const uniquePatients = Array.from(new Map(rows.map((r) => [r.patientId, { id: r.patientId, name: r.patient }])).values());
   const filtered = filterPatient ? rows.filter((r) => r.patientId === filterPatient) : rows;
 
@@ -122,11 +145,12 @@ export default function DosingPage() {
                     <th>Status</th>
                     <th>Reaction</th>
                     <th>Notes</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <SkeletonRow key={i} cols={8} />
+                    <SkeletonRow key={i} cols={9} />
                   ))}
                 </tbody>
               </table>
@@ -151,13 +175,15 @@ export default function DosingPage() {
                       <th>Status</th>
                       <th>Reaction</th>
                       <th>Notes</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((row) => {
+                      const isCompleted = row.status === 'Completed';
                       const st = STATUS_STYLE[row.status] ?? STATUS_STYLE.Scheduled;
                       return (
-                        <tr key={row.id}>
+                        <tr key={row.id} style={{ background: isCompleted ? '#f0fff4' : undefined }}>
                           <td style={{ fontWeight: 500 }}>{row.patient}</td>
                           <td style={{ fontWeight: 600 }}>Week {row.week}</td>
                           <td>{row.vial}</td>
@@ -170,6 +196,24 @@ export default function DosingPage() {
                           </td>
                           <td style={{ color: '#9ca3af', fontSize: 12 }}>{row.reaction || '—'}</td>
                           <td style={{ color: '#9ca3af', fontSize: 12 }}>{row.notes || '—'}</td>
+                          <td>
+                            {isCompleted ? (
+                              <span style={{ fontSize: 11, color: '#2e7d32', fontWeight: 700 }}>✓ Done</span>
+                            ) : (
+                              <button
+                                onClick={() => handleAdminister(row)}
+                                disabled={administeringId === row.id}
+                                style={{
+                                  background: '#2e7d32', color: '#fff', border: 'none', borderRadius: 6,
+                                  padding: '3px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                  opacity: administeringId === row.id ? 0.6 : 1,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {administeringId === row.id ? '…' : '✓ Administer'}
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}

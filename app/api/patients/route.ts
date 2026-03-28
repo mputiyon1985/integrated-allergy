@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         name: patient.name,
         dob: patient.dob.toISOString().slice(0, 10),
         physician: patient.physician,
-        status: 'Build-Up',
+        status: 'Build-Up', // default for new patients
       },
       { status: 201 }
     );

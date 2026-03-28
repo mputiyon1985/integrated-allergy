@@ -18,6 +18,20 @@ type RouteParams = { params: Promise<{ id: string }> };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const STATUS_DISPLAY: Record<string, string> = {
+  'build-up':    'Build-Up',
+  'maintenance': 'Maintenance',
+  'complete':    'Complete',
+  'inactive':    'Inactive',
+};
+
+const STATUS_DB: Record<string, string> = {
+  'Build-Up':    'build-up',
+  'Maintenance': 'maintenance',
+  'Complete':    'complete',
+  'Inactive':    'inactive',
+};
+
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
 
@@ -116,7 +130,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
         clinicLocation: patient.clinicLocation,
         diagnosis: patient.diagnosis,
         startDate: patient.startDate.toISOString().slice(0, 10),
-        status: 'Build-Up',
+        status: STATUS_DISPLAY[patient.status] ?? 'Build-Up',
         phone: patient.phone ?? '',
         email: patient.email ?? '',
         insuranceId: patient.insuranceId ?? '',
@@ -148,6 +162,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       email?: string;
       insuranceId?: string;
       notes?: string;
+      status?: string;
     };
 
     // Build update data — only include provided fields
@@ -163,6 +178,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (body.notes !== undefined)          data.notes          = body.notes || null;
     if (body.dob !== undefined)            data.dob            = new Date(body.dob);
     if (body.startDate !== undefined)      data.startDate      = new Date(body.startDate);
+    if (body.status !== undefined) {
+      // Accept either display form ('Build-Up') or DB form ('build-up')
+      data.status = STATUS_DB[body.status] ?? body.status;
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

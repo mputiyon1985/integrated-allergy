@@ -127,8 +127,8 @@ export default function PatientDetailPage() {
   const [editForm, setEditForm]               = useState<{
     firstName: string; lastName: string; dob: string; phone: string; email: string;
     insuranceId: string; doctorId: string; physician: string; clinicLocation: string;
-    diagnosis: string; startDate: string; notes: string;
-  }>({ firstName: '', lastName: '', dob: '', phone: '', email: '', insuranceId: '', doctorId: '', physician: '', clinicLocation: '', diagnosis: '', startDate: '', notes: '' });
+    diagnosis: string; startDate: string; notes: string; status: string;
+  }>({ firstName: '', lastName: '', dob: '', phone: '', email: '', insuranceId: '', doctorId: '', physician: '', clinicLocation: '', diagnosis: '', startDate: '', notes: '', status: 'Build-Up' });
   const [editSaving, setEditSaving]           = useState(false);
   const [editError, setEditError]             = useState<string | null>(null);
   const [doctorOptions, setDoctorOptions]     = useState<DoctorOption[]>([]);
@@ -432,6 +432,7 @@ export default function PatientDetailPage() {
       diagnosis:     patient.diagnosis ?? '',
       startDate:     patient.startDate ?? '',
       notes:         patient.notes ?? '',
+      status:        patient.status ?? 'Build-Up',
     });
     setEditError(null);
     setShowEditModal(true);
@@ -491,6 +492,7 @@ export default function PatientDetailPage() {
           email:         editForm.email,
           insuranceId:   editForm.insuranceId,
           notes:         editForm.notes,
+          status:        editForm.status,
         }),
       });
       if (res.ok) {
@@ -1083,6 +1085,19 @@ export default function PatientDetailPage() {
                       value={editForm.startDate}
                       onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
                     />
+                  </div>
+                  <div>
+                    <label className="form-label">Patient Status</label>
+                    <select
+                      className="form-input"
+                      value={editForm.status}
+                      onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                    >
+                      <option value="Build-Up">Build-Up</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Complete">Complete</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
                   </div>
                 </div>
 
