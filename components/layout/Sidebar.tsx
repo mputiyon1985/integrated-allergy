@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface AuthMe {
   user: { role: string; name: string; doctorName: string | null; nurseTitle: string | null } | null;
@@ -109,6 +109,14 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
   const [sidebarSettings, setSidebarSettings] = useState<SidebarSettings>(DEFAULTS);
   const [_userRole, setUserRole] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ role: string; name: string; doctorName: string | null; nurseTitle: string | null } | null>(null);
+  const [showChangePw, setShowChangePw] = useState(false);
+  const [cpCurrent, setCpCurrent] = useState('');
+  const [cpNew, setCpNew] = useState('');
+  const [cpConfirm, setCpConfirm] = useState('');
+  const [cpError, setCpError] = useState('');
+  const [cpSuccess, setCpSuccess] = useState(false);
+  const [cpLoading, setCpLoading] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -129,6 +137,24 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
       })
       .catch(() => {});
   }, []);
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setCpError('');
+    if (cpNew !== cpConfirm) { setCpError('New passwords do not match'); return; }
+    setCpLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: cpCurrent, newPassword: cpNew }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCpError(data.error || 'Failed to change password'); }
+      else { setCpSuccess(true); setTimeout(() => { setShowChangePw(false); setCpCurrent(''); setCpNew(''); setCpConfirm(''); setCpSuccess(false); }, 1500); }
+    } catch { setCpError('Network error'); }
+    finally { setCpLoading(false); }
+  }
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
@@ -263,6 +289,35 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
         </div>
       )}
 
+      {/* Change Password button */}
+      {currentUser && (
+        <div style={{ margin: '0 8px 4px', flexShrink: 0 }}>
+          <button
+            onClick={() => { setShowChangePw(true); setCpError(''); setCpSuccess(false); }}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: 'transparent',
+              border: '1px solid #e5e7eb',
+              borderRadius: 10,
+              color: '#6b7280',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#eff6ff'; (e.currentTarget as HTMLButtonElement).style.color = '#2563eb'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#93c5fd'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b7280'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; }}
+          >
+            <span>🔒</span> Change Password
+          </button>
+        </div>
+      )}
+
       {/* Settings — pinned at bottom above footer */}
       <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 0', flexShrink: 0 }}>
         <Link
@@ -299,6 +354,51 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
 
         <div>© 2026 {sidebarSettings.clinic_name}</div>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePw && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowChangePw(false); } }}
+        >
+          <div ref={modalRef} style={{ background: '#fff', borderRadius: 16, padding: 28, width: 360, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: '#111827' }}>Change Password</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280' }}>Must be 8+ chars with an uppercase letter and a number.</p>
+            {cpSuccess ? (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: '#059669', fontWeight: 700, fontSize: 15 }}>✓ Password changed successfully!</div>
+            ) : (
+              <form onSubmit={handleChangePassword}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>Current Password</label>
+                  <input type="password" value={cpCurrent} onChange={(e) => setCpCurrent(e.target.value)} required
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>New Password</label>
+                  <input type="password" value={cpNew} onChange={(e) => setCpNew(e.target.value)} required
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>Confirm New Password</label>
+                  <input type="password" value={cpConfirm} onChange={(e) => setCpConfirm(e.target.value)} required
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+                {cpError && <div style={{ marginBottom: 12, padding: '8px 10px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, color: '#dc2626', fontSize: 13 }}>{cpError}</div>}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="button" onClick={() => setShowChangePw(false)}
+                    style={{ flex: 1, padding: '9px', background: '#f3f4f6', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={cpLoading}
+                    style={{ flex: 1, padding: '9px', background: cpLoading ? '#9ca3af' : '#0d9488', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, color: '#fff', cursor: cpLoading ? 'not-allowed' : 'pointer' }}>
+                    {cpLoading ? 'Saving…' : 'Update Password'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

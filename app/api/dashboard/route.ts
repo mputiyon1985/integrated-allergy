@@ -10,6 +10,7 @@
  *     totalPatients       — All enrolled patients (count)
  *     activeTreatments    — Vials with expiresAt in the future (count)
  *     vialsExpiringSoon   — Vials expiring within 30 days (count)
+ *     vialsExpiring7Days  — Vials expiring within 7 days (count)
  *     dosesThisWeek       — Shots administered in past 7 days (count)
  *     shotsToday          — Shot-type appointments scheduled today (count)
  *     testsToday          — Skin test appointments today (count)
@@ -30,12 +31,14 @@ export async function GET() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd   = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
     const weekStart  = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const in7Days    = new Date(todayStart.getTime() + 7  * 24 * 60 * 60 * 1000);
     const in30Days   = new Date(todayStart.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const [
       totalPatients,
       activeVials,
       expiringVials,
+      expiringVials7Days,
       dosesThisWeek,
       shotsToday,
       testsToday,
@@ -50,8 +53,14 @@ export async function GET() {
         where: { deletedAt: null, expiresAt: { gte: now } },
       }),
 
+      // Vials expiring within 30 days
       prisma.vial.count({
         where: { deletedAt: null, expiresAt: { gte: now, lte: in30Days } },
+      }),
+
+      // Vials expiring within 7 days (urgent)
+      prisma.vial.count({
+        where: { deletedAt: null, expiresAt: { gte: now, lte: in7Days } },
       }),
 
       prisma.dosingSchedule.count({
@@ -116,6 +125,7 @@ export async function GET() {
         totalPatients,
         activeTreatments: activeVials,
         vialsExpiringSoon: expiringVials,
+        vialsExpiring7Days: expiringVials7Days,
         dosesThisWeek,
         shotsToday,
         testsToday,

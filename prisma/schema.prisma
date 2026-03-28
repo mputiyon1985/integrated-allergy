@@ -69,6 +69,7 @@ model Patient {
   email          String?
   insuranceId    String?
   notes          String?
+  status         String    @default("build-up")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?

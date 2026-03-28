@@ -2,6 +2,7 @@ export interface DashboardStats {
   totalPatients: number;
   activeTreatments: number;
   vialsExpiringSoon: number;
+  vialsExpiring7Days: number;
   dosesThisWeek: number;
   shotsToday: number;
   testsToday: number;

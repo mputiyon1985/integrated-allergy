@@ -19,6 +19,7 @@ const MOCK_STATS: DashboardStats = {
   totalPatients: 0,
   activeTreatments: 0,
   vialsExpiringSoon: 0,
+  vialsExpiring7Days: 0,
   dosesThisWeek: 0,
   shotsToday: 0,
   testsToday: 0,
@@ -275,6 +276,40 @@ export default function DashboardPage() {
 
         {!loading && stats && (
           <>
+            {/* ── Vial Expiry Alert Banner ── */}
+            {stats.vialsExpiring7Days > 0 && (
+              <div style={{ marginBottom: 16, padding: '12px 18px', background: '#ffebee', border: '1.5px solid #ef9a9a', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>⚠️</span>
+                  <div>
+                    <span style={{ fontWeight: 700, color: '#b71c1c', fontSize: 13 }}>
+                      {stats.vialsExpiring7Days} vial{stats.vialsExpiring7Days !== 1 ? 's' : ''} expiring within 7 days
+                    </span>
+                    <span style={{ color: '#c62828', fontSize: 13 }}> — Immediate action required.</span>
+                  </div>
+                </div>
+                <a href="/vial-prep" style={{ fontSize: 12, fontWeight: 600, color: '#b71c1c', textDecoration: 'none', whiteSpace: 'nowrap', background: '#ffcdd2', padding: '4px 12px', borderRadius: 8 }}>
+                  View Vial Prep →
+                </a>
+              </div>
+            )}
+            {stats.vialsExpiring7Days === 0 && stats.vialsExpiringSoon > 0 && (
+              <div style={{ marginBottom: 16, padding: '12px 18px', background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>🔔</span>
+                  <div>
+                    <span style={{ fontWeight: 700, color: '#e65100', fontSize: 13 }}>
+                      {stats.vialsExpiringSoon} vial{stats.vialsExpiringSoon !== 1 ? 's' : ''} expiring within 30 days
+                    </span>
+                    <span style={{ color: '#f57c00', fontSize: 13 }}> — Plan replacements soon.</span>
+                  </div>
+                </div>
+                <a href="/vial-prep" style={{ fontSize: 12, fontWeight: 600, color: '#e65100', textDecoration: 'none', whiteSpace: 'nowrap', background: '#ffe0b2', padding: '4px 12px', borderRadius: 8 }}>
+                  View Vial Prep →
+                </a>
+              </div>
+            )}
+
             {editMode && userRole === 'super_admin' && (
               <div
                 style={{

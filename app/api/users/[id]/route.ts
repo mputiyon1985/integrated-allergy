@@ -8,6 +8,13 @@ import prisma from '@/lib/db';
 import { verifySession } from '@/lib/auth/session';
 import bcrypt from 'bcryptjs';
 
+function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
+  if (pwd.length < 8) return { ok: false, reason: 'Password must be at least 8 characters' };
+  if (!/[A-Z]/.test(pwd)) return { ok: false, reason: 'Must contain at least one uppercase letter' };
+  if (!/[0-9]/.test(pwd)) return { ok: false, reason: 'Must contain at least one number' };
+  return { ok: true };
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -77,6 +84,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       updateData.email = body.email.trim().toLowerCase();
     }
     if (body.password) {
+      const pwCheck = isStrongPassword(body.password);
+      if (!pwCheck.ok) return NextResponse.json({ error: pwCheck.reason }, { status: 400 });
       updateData.passwordHash = await bcrypt.hash(body.password, 12);
     }
     if (body.role !== undefined) updateData.role = body.role;

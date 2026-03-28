@@ -5,6 +5,19 @@ import { signTempJWT, setSessionCookie, UserContext } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
+// ─── In-memory rate limiter (resets on server restart) ───────────────────────
+const loginAttempts = (globalThis as any).__loginAttempts ??
+  new Map<string, { count: number; resetAt: number }>();
+(globalThis as any).__loginAttempts = loginAttempts;
+
+// ─── Password strength helper ─────────────────────────────────────────────────
+export function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
+  if (pwd.length < 8) return { ok: false, reason: 'Password must be at least 8 characters' };
+  if (!/[A-Z]/.test(pwd)) return { ok: false, reason: 'Must contain at least one uppercase letter' };
+  if (!/[0-9]/.test(pwd)) return { ok: false, reason: 'Must contain at least one number' };
+  return { ok: true };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
@@ -13,16 +26,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = await getUserByEmail(email.toLowerCase().trim());
+    // ── Rate limit check ──────────────────────────────────────────────────────
+    const key = email.toLowerCase().trim();
+    const now = Date.now();
+    const attempts = loginAttempts.get(key);
+    if (attempts && attempts.count >= 5 && now < attempts.resetAt) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Try again in 15 minutes.' },
+        { status: 429 }
+      );
+    }
+
+    const user = await getUserByEmail(key);
 
     if (!user || !user.active) {
+      // Increment attempt counter even for unknown emails (prevents enumeration via timing)
+      const rec = loginAttempts.get(key) ?? { count: 0, resetAt: now + 15 * 60 * 1000 };
+      if (now >= rec.resetAt) { rec.count = 0; rec.resetAt = now + 15 * 60 * 1000; }
+      rec.count += 1;
+      loginAttempts.set(key, rec);
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
+      // Increment failed attempt counter
+      const rec = loginAttempts.get(key) ?? { count: 0, resetAt: now + 15 * 60 * 1000 };
+      if (now >= rec.resetAt) { rec.count = 0; rec.resetAt = now + 15 * 60 * 1000; }
+      rec.count += 1;
+      loginAttempts.set(key, rec);
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
+
+    // ── Success — clear rate-limit counter ────────────────────────────────────
+    loginAttempts.delete(key);
 
     // Check if MFA is globally required
     let mfaRequired = true;

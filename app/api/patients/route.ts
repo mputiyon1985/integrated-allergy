@@ -26,6 +26,12 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
     // Normalize to the shape the UI expects
+    const STATUS_DISPLAY: Record<string, string> = {
+      'build-up': 'Build-Up',
+      'maintenance': 'Maintenance',
+      'complete': 'Complete',
+      'inactive': 'Inactive',
+    };
     const shaped = patients.map((p) => ({
       id: p.id,
       patientId: p.patientId,
@@ -35,8 +41,7 @@ export async function GET() {
       clinicLocation: p.clinicLocation,
       diagnosis: p.diagnosis,
       startDate: p.startDate.toISOString().slice(0, 10),
-      // Derive status from createdAt for now — real status would be its own field
-      status: 'Build-Up',
+      status: STATUS_DISPLAY[p.status] ?? 'Build-Up',
     }));
     return NextResponse.json({ patients: shaped });
   } catch {

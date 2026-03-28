@@ -111,3 +111,18 @@ export function isEntityAdmin(user: UserContext): boolean {
 export function isSuperAdmin(user: UserContext): boolean {
   return user.role === 'super_admin';
 }
+
+/**
+ * Decode the JWT payload (without signature verification) to get the token age in minutes.
+ * Used for server-side session timeout enforcement.
+ */
+export function getTokenAge(token: string): number {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return Infinity;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    return Math.floor((Date.now() / 1000 - (payload.iat ?? 0)) / 60); // minutes
+  } catch {
+    return Infinity;
+  }
+}

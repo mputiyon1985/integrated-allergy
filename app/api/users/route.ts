@@ -7,6 +7,13 @@ import prisma from '@/lib/db';
 import { verifySession } from '@/lib/auth/session';
 import bcrypt from 'bcryptjs';
 
+function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
+  if (pwd.length < 8) return { ok: false, reason: 'Password must be at least 8 characters' };
+  if (!/[A-Z]/.test(pwd)) return { ok: false, reason: 'Must contain at least one uppercase letter' };
+  if (!/[0-9]/.test(pwd)) return { ok: false, reason: 'Must contain at least one number' };
+  return { ok: true };
+}
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -70,6 +77,10 @@ export async function POST(req: NextRequest) {
     if (!body.name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     if (!body.email?.trim()) return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     if (!body.password) return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+
+    // Password strength check
+    const pwCheck = isStrongPassword(body.password);
+    if (!pwCheck.ok) return NextResponse.json({ error: pwCheck.reason }, { status: 400 });
 
     // Check email uniqueness
     const existing = await prisma.appUser.findUnique({ where: { email: body.email.trim().toLowerCase() } });
