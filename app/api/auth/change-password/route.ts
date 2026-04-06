@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
 import { verifySession } from '@/lib/auth/session';
+import { isStrongPassword } from '@/lib/auth/password';
 
 export const dynamic = 'force-dynamic';
-
-function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
-  if (pwd.length < 8) return { ok: false, reason: 'Password must be at least 8 characters' };
-  if (!/[A-Z]/.test(pwd)) return { ok: false, reason: 'Must contain at least one uppercase letter' };
-  if (!/[0-9]/.test(pwd)) return { ok: false, reason: 'Must contain at least one number' };
-  return { ok: true };
-}
 
 export async function POST(req: NextRequest) {
   try {

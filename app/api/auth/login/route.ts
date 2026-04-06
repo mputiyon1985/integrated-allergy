@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getUserByEmail, getUserLocationIds, getDoctorById, getNurseById, getSettings } from '@/lib/auth/turso';
 import { signTempJWT, setSessionCookie, UserContext } from '@/lib/auth/session';
+export { isStrongPassword } from '@/lib/auth/password';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,14 +10,6 @@ export const dynamic = 'force-dynamic';
 const loginAttempts = (globalThis as any).__loginAttempts ??
   new Map<string, { count: number; resetAt: number }>();
 (globalThis as any).__loginAttempts = loginAttempts;
-
-// ─── Password strength helper ─────────────────────────────────────────────────
-export function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
-  if (pwd.length < 8) return { ok: false, reason: 'Password must be at least 8 characters' };
-  if (!/[A-Z]/.test(pwd)) return { ok: false, reason: 'Must contain at least one uppercase letter' };
-  if (!/[0-9]/.test(pwd)) return { ok: false, reason: 'Must contain at least one number' };
-  return { ok: true };
-}
 
 export async function POST(req: NextRequest) {
   try {

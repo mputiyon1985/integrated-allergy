@@ -5,14 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { verifySession } from '@/lib/auth/session';
+import { isStrongPassword } from '@/lib/auth/password';
 import bcrypt from 'bcryptjs';
-
-function isStrongPassword(pwd: string): { ok: boolean; reason?: string } {
-  if (pwd.length < 8) return { ok: false, reason: 'Password must be at least 8 characters' };
-  if (!/[A-Z]/.test(pwd)) return { ok: false, reason: 'Must contain at least one uppercase letter' };
-  if (!/[0-9]/.test(pwd)) return { ok: false, reason: 'Must contain at least one number' };
-  return { ok: true };
-}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -113,20 +107,18 @@ export async function POST(req: NextRequest) {
 
     // Link doctor record
     if (body.doctorId) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE Doctor SET appUserId = ? WHERE id = ?`,
-        user.id,
-        body.doctorId
-      );
+      await prisma.doctor.update({
+        where: { id: body.doctorId },
+        data: { appUserId: user.id },
+      });
     }
 
     // Link nurse record
     if (body.nurseId) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE Nurse SET appUserId = ? WHERE id = ?`,
-        user.id,
-        body.nurseId
-      );
+      await prisma.nurse.update({
+        where: { id: body.nurseId },
+        data: { appUserId: user.id },
+      });
     }
 
     await prisma.auditLog.create({

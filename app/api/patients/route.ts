@@ -4,27 +4,38 @@
  * @description
  * Manages the core patient registry for the Integrated Allergy IMS.
  *
- * GET  /api/patients         — Returns all enrolled patients ordered by enrollment date.
+ * GET  /api/patients         — Returns enrolled patients with pagination (?page=&limit=, default limit 50).
  *                              Response shape includes derived `status` field (Build-Up).
  *
- * POST /api/patients         — Enrolls a new patient. Auto-generates a `patientId` (PA-XXX-XXXXX)
- *                              if not provided. Creates an AuditLog entry on success.
+ * POST /api/patients         — Enrolls a new patient. Auto-generates a `patientId` (PA-XXXXXXXX)
+ *                              via nanoid if not provided. Creates an AuditLog entry on success.
  *                              Required: `name` (or `firstName`+`lastName`), `dob`, `physician`.
  *                              Returns: `{ id, patientId, name, dob, physician, status }` with HTTP 201.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-
+import { nanoid } from 'nanoid';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const patients = await prisma.patient.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { searchParams } = req.nextUrl;
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
+    const skip = (page - 1) * limit;
+
+    const [patients, total] = await Promise.all([
+      prisma.patient.findMany({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.patient.count({ where: { deletedAt: null } }),
+    ]);
+
     // Normalize to the shape the UI expects
     const STATUS_DISPLAY: Record<string, string> = {
       'build-up': 'Build-Up',
@@ -43,9 +54,10 @@ export async function GET() {
       startDate: p.startDate.toISOString().slice(0, 10),
       status: STATUS_DISPLAY[p.status] ?? 'Build-Up',
     }));
-    return NextResponse.json({ patients: shaped });
-  } catch {
-    return NextResponse.json({ patients: [] });
+    return NextResponse.json({ patients: shaped, page, limit, total });
+  } catch (err) {
+    console.error('GET /api/patients error:', err);
+    return NextResponse.json({ error: 'Failed to fetch patients' }, { status: 500 });
   }
 }
 
@@ -79,11 +91,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Auto-generate patientId if not provided
-    const count = await prisma.patient.count().catch(() => 0);
+    // Auto-generate patientId via nanoid to avoid race conditions
     const patientId =
       body.patientId ||
-      `PA-${String(count + 1).padStart(3, '0')}-${Date.now().toString(36).toUpperCase()}`;
+      `PA-${nanoid(8).toUpperCase()}`;
 
     const patient = await prisma.patient.create({
       data: {

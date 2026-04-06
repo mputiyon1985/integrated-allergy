@@ -9,7 +9,7 @@ const SESSION_COOKIE = 'ia_session';
 
 const PUBLIC_PATHS = ['/login', '/api/auth'];
 
-export async function proxy(req: NextRequest) {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public paths
@@ -55,6 +55,14 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    /*
+     * Match all request paths EXCEPT:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico
+     * - public/ (public assets)
+     * - /api/auth/* (auth endpoints — login, logout, mfa, etc.)
+     */
+    '/((?!_next/static|_next/image|favicon\\.ico|public/|api/auth/).*)',
   ],
 };
