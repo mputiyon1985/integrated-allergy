@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TopBar from '@/components/layout/TopBar';
 
@@ -116,27 +116,20 @@ export default function CalendarPage() {
     }
   }, [newParam, patientIdParam]);
 
-  // Load all reference data + initial appointments in one parallel batch
+  // Load reference data (patients, doctors, nurses) in parallel once
   useEffect(() => {
-    const [from, to] = getViewRange(currentDate, viewMode);
-    const apptParams = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
-    if (typeFilter !== 'all') apptParams.set('type', typeFilter);
-
     Promise.allSettled([
       fetch('/api/patients?limit=200').then(r => r.json()),
       fetch('/api/doctors?active=true').then(r => r.json()),
       fetch('/api/nurses?active=true').then(r => r.json()),
-      fetch(`/api/appointments?${apptParams}`).then(r => r.json()),
-    ]).then(([p, d, n, a]) => {
+    ]).then(([p, d, n]) => {
       if (p.status === 'fulfilled') setPatients(p.value.patients ?? []);
       if (d.status === 'fulfilled') setDoctors(d.value.doctors ?? []);
       if (n.status === 'fulfilled') setNurses(n.value.nurses ?? []);
-      if (a.status === 'fulfilled') setAppointments(a.value.appointments ?? []);
     }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload appointments when view/filter changes (not on initial mount — handled above)
+  // Load appointments for current view window
   const loadAppointments = useCallback(async () => {
     setLoading(true);
     try {
@@ -153,11 +146,7 @@ export default function CalendarPage() {
     }
   }, [currentDate, viewMode, typeFilter]);
 
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return; }
-    loadAppointments();
-  }, [loadAppointments]);
+  useEffect(() => { loadAppointments(); }, [loadAppointments]);
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   function navigate(dir: -1 | 1) {

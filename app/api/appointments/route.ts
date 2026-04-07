@@ -28,21 +28,23 @@ export async function GET(req: NextRequest) {
     const to        = searchParams.get('to');
     const type      = searchParams.get('type');
 
+    // Default date range: current month if none provided (prevents full table scan)
+    const now = new Date();
+    const defaultFrom = from ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const defaultTo   = to   ?? new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
     const appointments = await prisma.appointment.findMany({
       where: {
         deletedAt: null,
         ...(patientId && { patientId }),
         ...(type      && { type }),
-        ...(from || to
-          ? {
-              startTime: {
-                ...(from && { gte: new Date(from) }),
-                ...(to   && { lte: new Date(to)   }),
-              },
-            }
-          : {}),
+        startTime: {
+          gte: new Date(defaultFrom),
+          lte: new Date(defaultTo),
+        },
       },
       orderBy: { startTime: 'asc' },
+      take: 500,
       include: { patient: { select: { id: true, name: true, patientId: true } } },
     });
 
