@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import TopBar from '@/components/layout/TopBar';
@@ -410,27 +410,26 @@ export default function SettingsPage() {
     );
   }
 
-  // Memoize tile content WITHOUT open/onToggle — those are passed dynamically at render time.
-  // This prevents tile components from re-mounting every time openTile state changes,
-  // which was causing their useEffect/load() to re-fire and close the accordion.
-  const tileComponents = useMemo<Partial<Record<TileId, React.ReactNode>>>(() => ({
-    branding: <BrandingTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
-    notifications: <NotificationsTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
-    appearance: <AppearanceTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
-    clinic: <ClinicDefaultsTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} doctors={doctors} />,
-    security: <SecurityTile open={false} onToggle={() => {}} editMode={editMode} settings={settings} onSettingsChange={setSettings} />,
-    export: <ExportTile open={false} onToggle={() => {}} editMode={editMode} />,
-    diagnoses: <DiagnosesTile open={false} onToggle={() => {}} editMode={editMode} />,
-    'doctor-titles': <DoctorTitlesTile open={false} onToggle={() => {}} editMode={editMode} />,
-    'nurse-titles': <NurseTitlesTile open={false} onToggle={() => {}} editMode={editMode} />,
-    allergens: <AllergensTile open={false} onToggle={() => {}} editMode={editMode} />,
-    entities: <EntitiesTile open={false} onToggle={() => {}} editMode={editMode} />,
-    'entity-locations': <EntityLocationsTile open={false} onToggle={() => {}} editMode={editMode} />,
-    ...(userRole === 'super_admin' ? {
-      users: <UsersTile open={false} onToggle={() => {}} editMode={editMode} />,
-      'audit-log': <AuditLogTile open={false} onToggle={() => {}} editMode={editMode} />,
-    } : {}),
-  }), [settings, doctors, userRole, editMode]);
+  // Render tile content by id — called at JSX render time so hooks are valid
+  const renderTileContent = (id: TileId) => {
+    switch (id) {
+      case 'branding':        return <BrandingTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} settings={settings} onSettingsChange={setSettings} />;
+      case 'notifications':   return <NotificationsTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} settings={settings} onSettingsChange={setSettings} />;
+      case 'appearance':      return <AppearanceTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} settings={settings} onSettingsChange={setSettings} />;
+      case 'clinic':          return <ClinicDefaultsTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} settings={settings} onSettingsChange={setSettings} doctors={doctors} />;
+      case 'security':        return <SecurityTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} settings={settings} onSettingsChange={setSettings} />;
+      case 'export':          return <ExportTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'diagnoses':       return <DiagnosesTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'doctor-titles':   return <DoctorTitlesTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'nurse-titles':    return <NurseTitlesTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'allergens':       return <AllergensTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'entities':        return <EntitiesTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'entity-locations':return <EntityLocationsTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} />;
+      case 'users':           return userRole === 'super_admin' ? <UsersTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} /> : null;
+      case 'audit-log':       return userRole === 'super_admin' ? <AuditLogTile open={openTile === id} onToggle={() => toggleTile(id)} editMode={editMode} /> : null;
+      default:                return null;
+    }
+  };
 
 
   const TILE_META: Record<TileId, { icon: string; title: string; desc: string }> = {
@@ -450,10 +449,10 @@ export default function SettingsPage() {
     'audit-log': { icon: '📋', title: 'Audit Log', desc: 'System activity and compliance log' },
   };
 
-  const tiles = tileIds.filter((id) => tileComponents[id]);
+  const tiles = tileIds.filter((id) => renderTileContent(id) !== null);
   const draggableTiles = tiles.map(id => ({
     id,
-    node: tileComponents[id] ?? null,
+    node: renderTileContent(id),
   }));
 
   return (
@@ -516,7 +515,7 @@ export default function SettingsPage() {
                   onToggle={() => toggleTile(id)}
                   editMode={editMode}
                 >
-                  {tileComponents[id]}
+                  {renderTileContent(id)}
                 </SettingsTile>
               );
             })}
