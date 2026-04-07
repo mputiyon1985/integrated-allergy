@@ -22,7 +22,6 @@ import { isStrongPassword } from '@/lib/auth/password';
 import bcrypt from 'bcryptjs';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all non-deleted users with entity name and location access details.

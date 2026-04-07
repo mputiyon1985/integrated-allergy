@@ -22,7 +22,6 @@ type RouteParams = { params: Promise<{ id: string }> }
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all vials for a patient ordered by vial number (1–4), including linked doses.

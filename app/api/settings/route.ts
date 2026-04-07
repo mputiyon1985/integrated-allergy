@@ -21,7 +21,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all application settings as a flat key-value map.

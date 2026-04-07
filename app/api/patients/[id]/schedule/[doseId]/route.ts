@@ -17,7 +17,6 @@ type RouteParams = { params: Promise<{ id: string; doseId: string }> };
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Partially updates a dosing schedule entry. Most commonly used to mark a dose as administered.

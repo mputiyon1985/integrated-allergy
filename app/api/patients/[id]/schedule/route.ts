@@ -23,7 +23,6 @@ type RouteParams = { params: Promise<{ id: string }> }
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all dosing schedule records for a patient, ordered by week number.

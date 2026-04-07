@@ -53,7 +53,6 @@ interface VialBatchPayload {
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Compounds a full 4-vial batch for a patient with safety validation.

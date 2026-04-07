@@ -20,7 +20,6 @@ import prisma from '@/lib/db';
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns paginated audit log entries, optionally filtered by patientId or entity type.

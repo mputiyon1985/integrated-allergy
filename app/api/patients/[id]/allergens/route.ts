@@ -19,7 +19,6 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns the patient's current allergen mix with full allergen details.

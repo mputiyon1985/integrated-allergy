@@ -18,7 +18,6 @@ import prisma from '@/lib/db';
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all non-deleted allergens sorted alphabetically.

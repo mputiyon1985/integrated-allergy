@@ -19,7 +19,6 @@ import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all nursing staff ordered by name, optionally filtered to active only.

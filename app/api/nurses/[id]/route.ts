@@ -15,7 +15,6 @@ import prisma from '@/lib/db';
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns a single nurse/clinical staff record by ID.

@@ -19,7 +19,6 @@ import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns appointments filtered by optional query parameters.

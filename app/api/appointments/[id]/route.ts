@@ -19,7 +19,6 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns a single appointment with patient context.

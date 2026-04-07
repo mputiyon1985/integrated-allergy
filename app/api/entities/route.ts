@@ -17,7 +17,6 @@ import prisma from '@/lib/db';
 import { verifySession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns all non-deleted business entities with their active location count.

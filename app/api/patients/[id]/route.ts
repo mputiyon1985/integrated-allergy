@@ -16,7 +16,6 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /** @internal Maps DB status values to display labels. */
 const STATUS_DISPLAY: Record<string, string> = {

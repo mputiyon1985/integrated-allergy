@@ -20,7 +20,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Lists clinic locations, optionally filtered by active status or entity.

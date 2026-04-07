@@ -21,7 +21,6 @@ import prisma from '@/lib/db';
 type RouteParams = { params: Promise<{ id: string; allergenMixId: string }> };
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Updates the volume for a single allergen mix entry.

@@ -14,7 +14,6 @@ import prisma from '@/lib/db'
 
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 /**
  * Returns paginated audit log entries (alias of /api/audit-log for backward compatibility).
