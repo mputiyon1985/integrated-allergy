@@ -1,36 +1,39 @@
 /**
- * Environment variable validation using Zod.
- * Validates all required env vars at startup — fails fast with clear error messages.
- * Import this in lib/db.ts and lib/auth/session.ts to ensure env is validated.
+ * Environment variable access with runtime validation.
+ * Import `env` to access validated environment variables.
+ * Validation only runs on first API request, not during build.
  */
-import { z } from 'zod';
 
-// Runtime-only schema — all fields optional at build time, validated at request time
-const envSchema = z.object({
-  DATABASE_URL: z.string().optional(),
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional(),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-});
+let validated = false;
 
-const _parsed = envSchema.safeParse(process.env);
+/**
+ * Validates critical environment variables at runtime.
+ * Called lazily on first use to avoid build-time failures.
+ */
+export function validateEnv(): void {
+  if (validated) return;
+  validated = true;
 
-// Validate critical secrets at runtime (not build time) in production
-if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const errors: string[] = [];
+
   if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is required');
+    errors.push('DATABASE_URL is required');
   }
+
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-    throw new Error('JWT_SECRET environment variable is required and must be at least 32 characters');
+    errors.push('JWT_SECRET is required and must be at least 32 characters');
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`❌ Invalid environment configuration:\n${errors.join('\n')}`);
   }
 }
 
+/** Typed environment variable accessor */
 export const env = {
-  DATABASE_URL: process.env.DATABASE_URL ?? '',
-  JWT_SECRET: process.env.JWT_SECRET,
-  NODE_ENV: (process.env.NODE_ENV ?? 'development') as 'development' | 'test' | 'production',
+  get DATABASE_URL() { return process.env.DATABASE_URL ?? ''; },
+  get JWT_SECRET() { return process.env.JWT_SECRET; },
+  get NODE_ENV() { return (process.env.NODE_ENV ?? 'development') as 'development' | 'test' | 'production'; },
 };
-
-// Log warnings in dev if env vars are missing
-if (process.env.NODE_ENV === 'development' && !_parsed.success) {
-  console.warn('⚠️ Some environment variables are missing:', _parsed.error?.flatten().fieldErrors);
-}
