@@ -94,29 +94,27 @@ export default function DoctorsPage() {
   const [titleCustom, setTitleCustom] = useState('');
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
 
-  // Load title options + locations once
-  useEffect(() => {
-    fetch('/api/doctor-titles?active=true')
-      .then((r) => r.json())
-      .then((d: { titles: { id: string; name: string }[] }) => {
-        const names = d.titles?.map((t) => t.name) ?? [];
-        setTitleOptions(names.length ? names : FALLBACK_TITLES);
-      })
-      .catch(() => setTitleOptions(FALLBACK_TITLES));
-    fetch('/api/locations?active=true')
-      .then((r) => r.json())
-      .then((d: { locations: { id: string; name: string }[] }) => setLocations(d.locations ?? []))
-      .catch(() => setLocations([]));
-  }, []);
-
+  // Load all data in parallel on mount
   const fetchDoctors = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/doctors');
-      const data = await res.json();
-      setDoctors(data.doctors ?? []);
+      const [doctorsRes, titlesRes, locationsRes] = await Promise.all([
+        fetch('/api/doctors'),
+        fetch('/api/doctor-titles?active=true'),
+        fetch('/api/locations?active=true'),
+      ]);
+      const [doctorsData, titlesData, locationsData] = await Promise.all([
+        doctorsRes.json(),
+        titlesRes.json(),
+        locationsRes.json(),
+      ]);
+      setDoctors(doctorsData.doctors ?? []);
+      const names = (titlesData as { titles: { id: string; name: string }[] }).titles?.map((t) => t.name) ?? [];
+      setTitleOptions(names.length ? names : FALLBACK_TITLES);
+      setLocations((locationsData as { locations: { id: string; name: string }[] }).locations ?? []);
     } catch {
       setDoctors([]);
+      setTitleOptions(FALLBACK_TITLES);
     } finally {
       setLoading(false);
     }
