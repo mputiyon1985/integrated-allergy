@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { generateBuildupSchedule } from '@/lib/clinical/dilution'
+import { HIPAA_HEADERS } from '@/lib/hipaaHeaders'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -41,7 +42,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       orderBy: [{ weekNumber: 'asc' }, { vialId: 'asc' }],
       include: { vial: true },
     })
-    return NextResponse.json(schedule)
+    return NextResponse.json(schedule, { headers: { ...HIPAA_HEADERS } })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch schedule' }, { status: 500 })
   }

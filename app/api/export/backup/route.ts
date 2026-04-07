@@ -12,19 +12,32 @@
  *   Shape: { exportedAt, version, data: { patients[], doctors[], nurses[], ... } }
  *
  * @security Should be restricted to super_admin in production.
- *           Contains full PII — handle with care.
+ *           Contains full PHI — handle with care.
+ *           All exports are logged to the audit trail (HIPAA).
  */
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { HIPAA_HEADERS } from '@/lib/hipaaHeaders';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Exports a full JSON backup of all active clinical records.
+ * Logs the export action to the audit trail.
  * @returns JSON file download or 500 error
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // HIPAA: log PHI export to audit trail
+    await prisma.auditLog.create({
+      data: {
+        action: 'PHI Export',
+        entity: 'Export',
+        entityId: 'backup-json',
+        details: `Full backup exported by user ${req.headers.get('x-user-id') ?? 'unknown'}`,
+      },
+    });
+
     const [patients, doctors, nurses, allergens, appointments, auditLogs, vials, dosingSchedules] =
       await Promise.all([
         prisma.patient.findMany({ where: { deletedAt: null } }),
@@ -45,6 +58,7 @@ export async function GET() {
 
     return new Response(JSON.stringify(backup, null, 2), {
       headers: {
+        ...HIPAA_HEADERS,
         'Content-Type': 'application/json',
         'Content-Disposition': `attachment; filename="ims-backup-${new Date().toISOString().slice(0, 10)}.json"`,
       },

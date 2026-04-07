@@ -11,10 +11,12 @@
  *            Diagnosis, Start Date, Phone, Email, Insurance ID, Created At
  *   File name: patients-YYYY-MM-DD.csv
  *
- * @security Contains PII. Should be restricted to authorized clinical staff.
+ * @security Contains PHI. Restricted to authorized clinical staff.
+ *           All exports are logged to the audit trail (HIPAA).
  */
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { HIPAA_HEADERS } from '@/lib/hipaaHeaders';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +27,21 @@ function escape(v: unknown) {
 
 /**
  * Exports the full patient roster as a CSV download.
+ * Logs the export action to the audit trail.
  * @returns CSV file response or 500 error JSON
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // HIPAA: log PHI export to audit trail
+    await prisma.auditLog.create({
+      data: {
+        action: 'PHI Export',
+        entity: 'Export',
+        entityId: 'patients-csv',
+        details: `Patient data exported by user ${req.headers.get('x-user-id') ?? 'unknown'}`,
+      },
+    });
+
     const patients = await prisma.patient.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },
@@ -60,6 +73,7 @@ export async function GET() {
 
     return new Response(csv, {
       headers: {
+        ...HIPAA_HEADERS,
         'Content-Type': 'text/csv',
         'Content-Disposition': `attachment; filename="patients-${new Date().toISOString().slice(0, 10)}.csv"`,
       },

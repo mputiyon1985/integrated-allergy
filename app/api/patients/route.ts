@@ -14,6 +14,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { HIPAA_HEADERS } from '@/lib/hipaaHeaders';
 import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 import { nanoid } from 'nanoid';
 
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
       status: STATUS_DISPLAY[p.status] ?? 'Build-Up',
     }));
     return NextResponse.json({ patients: shaped, page, limit, total }, {
-      headers: { 'Cache-Control': 'no-store' },
+      headers: { ...HIPAA_HEADERS },
     });
   } catch (err) {
     console.error('GET /api/patients error:', err);

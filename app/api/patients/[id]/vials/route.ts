@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { generateVials } from '@/lib/clinical/dilution'
 import { validateGlycerin } from '@/lib/clinical/safety'
+import { HIPAA_HEADERS } from '@/lib/hipaaHeaders'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -40,7 +41,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       orderBy: { vialNumber: 'asc' },
       include: { doses: { orderBy: { weekNumber: 'asc' } } },
     })
-    return NextResponse.json(vials)
+    return NextResponse.json(vials, { headers: { ...HIPAA_HEADERS } })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch vials' }, { status: 500 })
   }

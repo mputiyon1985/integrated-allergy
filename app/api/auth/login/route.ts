@@ -3,8 +3,8 @@
  *
  * @description
  * Authenticates users with email/password and handles the MFA flow.
- * Includes an in-memory rate limiter (5 attempts per 15-minute window) to
- * prevent brute-force attacks. Rate limits reset on server restart.
+ * Includes a persistent database-backed rate limiter (5 attempts per 15-minute window)
+ * to prevent brute-force attacks. HIPAA-compliant: survives serverless cold starts.
  *
  * POST /api/auth/login
  *   Body: { email: string, password: string }
@@ -17,24 +17,22 @@
  *
  * @security Passwords are compared with bcrypt (cost factor 12).
  *           Same error message returned for unknown email vs wrong password (prevents user enumeration).
+ *           Rate limiting is backed by the database and persists across serverless cold starts.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import prisma from '@/lib/db';
 import { getUserByEmail, getUserLocationIds, getDoctorById, getNurseById, getSettings } from '@/lib/auth/turso';
 import { signTempJWT, setSessionCookie, UserContext } from '@/lib/auth/session';
+import { checkLoginRateLimit } from '@/lib/auth/rateLimit';
 export { isStrongPassword } from '@/lib/auth/password';
 
 export const dynamic = 'force-dynamic';
 
-// ─── In-memory rate limiter (resets on server restart) ───────────────────────
-const loginAttempts = (globalThis as any).__loginAttempts ??
-  new Map<string, { count: number; resetAt: number }>();
-(globalThis as any).__loginAttempts = loginAttempts;
-
 /**
  * Handles user login with email/password credentials.
- * Enforces rate limiting, validates credentials, and initiates the MFA flow
- * or issues a session directly depending on global settings.
+ * Enforces persistent database-backed rate limiting, validates credentials,
+ * and initiates the MFA flow or issues a session directly depending on global settings.
  * @param req - Incoming POST request with { email, password } body
  * @returns JSON response indicating success, MFA requirement, or error
  */
@@ -46,11 +44,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // ── Rate limit check ──────────────────────────────────────────────────────
     const key = email.toLowerCase().trim();
-    const now = Date.now();
-    const attempts = loginAttempts.get(key);
-    if (attempts && attempts.count >= 5 && now < attempts.resetAt) {
+
+    // ── Persistent rate limit check (HIPAA-compliant, survives cold starts) ──
+    const { allowed, remaining } = await checkLoginRateLimit(key);
+    if (!allowed) {
       return NextResponse.json(
         { error: 'Too many attempts. Try again in 15 minutes.' },
         { status: 429 }
@@ -60,26 +58,33 @@ export async function POST(req: NextRequest) {
     const user = await getUserByEmail(key);
 
     if (!user || !user.active) {
-      // Increment attempt counter even for unknown emails (prevents enumeration via timing)
-      const rec = loginAttempts.get(key) ?? { count: 0, resetAt: now + 15 * 60 * 1000 };
-      if (now >= rec.resetAt) { rec.count = 0; rec.resetAt = now + 15 * 60 * 1000; }
-      rec.count += 1;
-      loginAttempts.set(key, rec);
+      // Log failed attempt to AuditLog (counted by rate limiter on next request)
+      await prisma.auditLog.create({
+        data: {
+          action: 'Login Failed',
+          entity: 'Auth',
+          entityId: null,
+          details: `Failed login attempt for: ${key} (unknown user)`,
+        },
+      });
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
-      // Increment failed attempt counter
-      const rec = loginAttempts.get(key) ?? { count: 0, resetAt: now + 15 * 60 * 1000 };
-      if (now >= rec.resetAt) { rec.count = 0; rec.resetAt = now + 15 * 60 * 1000; }
-      rec.count += 1;
-      loginAttempts.set(key, rec);
+      // Log failed attempt to AuditLog (counted by rate limiter on next request)
+      await prisma.auditLog.create({
+        data: {
+          action: 'Login Failed',
+          entity: 'Auth',
+          entityId: user.id,
+          details: `Failed login attempt for: ${key}`,
+        },
+      });
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
-    // ── Success — clear rate-limit counter ────────────────────────────────────
-    loginAttempts.delete(key);
+    // ── Success ────────────────────────────────────────────────────────────────
 
     // Check if MFA is globally required
     let mfaRequired = true;
