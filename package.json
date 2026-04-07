@@ -1,7 +1,3 @@
-Moved typescript back to dependencies
-Moved @types/react back to dependencies
-Moved @types/react-dom back to dependencies
-Moved @types/node back to dependencies
 {
   "name": "integrated-allergy",
   "version": "0.2.0",
