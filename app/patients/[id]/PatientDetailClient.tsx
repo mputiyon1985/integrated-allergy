@@ -170,54 +170,61 @@ export default function PatientDetailPage() {
     if (tabParam !== null) setActiveTab(parseInt(tabParam));
   }, [tabParam]);
 
-  // ── Load allergen library for picker ────────────────────────────────────────
-  useEffect(() => {
-    fetch('/api/allergens')
-      .then((r) => r.json())
-      .then((d) => setAllergenOptions(d.allergens ?? []))
-      .catch(() => {});
-  }, []);
-
-  // ── Load patient data ───────────────────────────────────────────────────────
+  // ── Load all initial data in parallel ───────────────────────────────────────
+  // Group 1 (core): patient detail + appointments fire concurrently.
+  // Group 2 (lookup): allergen library fires concurrently with Group 1.
+  // Both groups start at the same time via the outer Promise.all.
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/patients/${patientDbId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setPatient(data.patient);
-          const loadedAllergens: AllergenMixItem[] = data.allergens ?? [];
+        const [coreResults, allergenResult] = await Promise.all([
+          // Core patient data + appointments in parallel
+          Promise.all([
+            fetch(`/api/patients/${patientDbId}`).then((r) => r.ok ? r.json() : null),
+            fetch(`/api/appointments?patientId=${patientDbId}`).then((r) => r.ok ? r.json() : null),
+          ]),
+          // Allergen library for the picker
+          fetch('/api/allergens').then((r) => r.ok ? r.json() : null).catch(() => null),
+        ]);
+
+        const [patientData, appointmentData] = coreResults;
+
+        // Process patient + related data
+        if (patientData) {
+          setPatient(patientData.patient);
+          const loadedAllergens: AllergenMixItem[] = patientData.allergens ?? [];
           setAllergens(loadedAllergens);
-          // Pre-check allergens already in mix
           const initChecked: Record<string, string> = {};
           loadedAllergens.forEach((a) => {
             initChecked[a.allergenId] = String(a.volume);
           });
           setGridChecked(initChecked);
-          setVials((data.vials ?? []).map((v: { id: string; vialNumber: number; color?: string; dilutionRatio: string; volume: number; expiry: string; status: string }) => ({
+          setVials((patientData.vials ?? []).map((v: { id: string; vialNumber: number; color?: string; dilutionRatio: string; volume: number; expiry: string; status: string }) => ({
             ...v,
             color: isVialColor(v.color ?? '') ? (v.color as VialColor) : 'silver',
             status: (['Active','Expired','Depleted','Pending'].includes(v.status) ? v.status : 'Active') as Vial['status'],
           })));
-          setDosing(data.dosing ?? []);
-          setAudit(data.audit ?? []);
+          setDosing(patientData.dosing ?? []);
+          setAudit(patientData.audit ?? []);
+
+          // Build safety alerts from freshly loaded vials
+          const loadedVials = patientData.vials ?? [];
+          const expiredVials = loadedVials.filter((v: { status: string }) => v.status === 'Expired');
+          if (expiredVials.length > 0) {
+            setAlerts([{ level: 'danger', message: `${expiredVials.length} vial(s) have expired`, detail: 'Do not administer. Generate new vials immediately.' }]);
+          }
         }
 
-        // Load appointments separately
-        const aRes = await fetch(`/api/appointments?patientId=${patientDbId}`);
-        if (aRes.ok) {
-          const aData = await aRes.json();
-          setAppointments(aData.appointments ?? []);
+        // Process appointments
+        if (appointmentData) {
+          setAppointments(appointmentData.appointments ?? []);
         }
 
-        // Build safety alerts
-        const newAlerts: typeof alerts = [];
-        const expiredVials = vials.filter((v) => v.status === 'Expired');
-        if (expiredVials.length > 0) {
-          newAlerts.push({ level: 'danger', message: `${expiredVials.length} vial(s) have expired`, detail: 'Do not administer. Generate new vials immediately.' });
+        // Process allergen library for picker
+        if (allergenResult) {
+          setAllergenOptions(allergenResult.allergens ?? []);
         }
-        setAlerts(newAlerts);
       } catch {
         setPatient(null);
       } finally {

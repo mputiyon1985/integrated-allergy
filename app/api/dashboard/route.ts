@@ -134,6 +134,8 @@ export async function GET() {
         activeNurses,
       },
       activity,
+    }, {
+      headers: { 'Cache-Control': 'no-store' },
     });
   } catch (err) {
     console.error('Dashboard API error:', err);
