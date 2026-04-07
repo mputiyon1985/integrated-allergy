@@ -8,6 +8,10 @@ import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Fires a minimal DB query (SELECT 1) to keep the Turso connection warm.
+ * @returns JSON { ok: true } always (returns ok: false with HTTP 200 if DB is unreachable)
+ */
 export async function GET() {
   try {
     // Minimal query — just checks connection is alive

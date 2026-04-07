@@ -1,6 +1,20 @@
 /**
- * GET  /api/locations          — List active (or all) clinic locations
- * POST /api/locations          — Create a new clinic location
+ * @file /api/locations — Clinic location management API
+ *
+ * @description
+ * Manages clinic location records. Each location belongs to a business entity
+ * and is used for patient assignment, user access scoping, and scheduling.
+ *
+ * GET  /api/locations  — Returns all non-deleted locations with their parent entity.
+ *                        Query: ?active=true to return only active locations.
+ *                        Query: ?entityId=<id> to filter by business entity.
+ *
+ * POST /api/locations  — Creates a new clinic location.
+ *                        Required: name, entityId.
+ *                        Optional: address, phone, sortOrder.
+ *                        Returns the created location with HTTP 201.
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -8,6 +22,11 @@ import prisma from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Lists clinic locations, optionally filtered by active status or entity.
+ * @param req - Query params: active? (boolean string), entityId?
+ * @returns JSON { locations[] } with 30-second CDN cache
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -38,6 +57,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Creates a new clinic location within a business entity.
+ * @param req - POST request. Body: { name: string, entityId: string, address?, phone?, sortOrder? }
+ * @returns JSON { location } with HTTP 201, or 400/500 on failure
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {

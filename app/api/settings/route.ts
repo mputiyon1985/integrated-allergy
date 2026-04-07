@@ -1,8 +1,21 @@
 /**
- * @file /api/settings — App Settings API
+ * @file /api/settings — Application settings API
  *
- * GET  /api/settings  — Returns all settings as { key: value } map
- * PUT  /api/settings  — Upserts one or more settings: { key: string, value: string }[]
+ * @description
+ * Manages the key-value Settings table used to configure app behaviour at runtime
+ * (clinic name, MFA policy, session timeout, diagnosis options, etc.).
+ * Falls back to hardcoded defaults if the Settings table doesn't yet exist.
+ *
+ * GET  /api/settings  — Returns all settings as a flat { key: value } map.
+ *                       Falls back to hardcoded defaults if the table is absent.
+ *
+ * PUT  /api/settings  — Upserts one or more settings.
+ *                       Body: { key: string, value: string }[]
+ *                       Uses INSERT ON CONFLICT DO UPDATE for idempotency.
+ *                       Logs changes to AuditLog.
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts).
+ *           Write access should be restricted to entity_admin / super_admin.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -10,6 +23,11 @@ import prisma from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all application settings as a flat key-value map.
+ * Falls back to hardcoded defaults if the Settings table does not yet exist.
+ * @returns JSON Record<string, string> with 30-second CDN cache
+ */
 export async function GET() {
   try {
     const rows = await prisma.$queryRaw<{ key: string; value: string }[]>`
@@ -47,6 +65,11 @@ export async function GET() {
   }
 }
 
+/**
+ * Upserts one or more application settings.
+ * @param req - PUT request. Body: { key: string, value: string }[]
+ * @returns JSON { ok: true } or 400/500 on failure
+ */
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json() as { key: string; value: string }[];

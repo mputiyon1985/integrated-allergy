@@ -24,6 +24,12 @@ type RouteParams = { params: Promise<{ id: string }> }
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all dosing schedule records for a patient, ordered by week number.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Patient UUID
+ * @returns JSON array of DosingSchedule records including linked Vial, or 404/500
+ */
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
@@ -41,6 +47,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Generates buildup dosing schedules for all of the patient's vials using the AAAI clinical engine.
+ * Each vial receives a 10-week schedule, offset sequentially (vial 2 starts at week 11, etc.).
+ * @param req - POST request. Body: { startWeek?: number (default 1) }
+ * @param params.id - Patient UUID
+ * @returns JSON { schedule[] } with HTTP 201, or 400/500 on failure
+ */
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params

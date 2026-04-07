@@ -1,12 +1,25 @@
 /**
- * PUT    /api/nurse-titles/[id]  — Update
- * DELETE /api/nurse-titles/[id]  — Soft delete
+ * @file /api/nurse-titles/[id] — Single nurse title API
+ *
+ * @description
+ * Update and soft-delete operations for an individual nursing title record.
+ *
+ * PUT    /api/nurse-titles/[id]  — Updates name, active, or sortOrder
+ * DELETE /api/nurse-titles/[id]  — Soft-deletes and deactivates the title
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Updates a nursing title's fields.
+ * @param req - PUT request. Body (all optional): { name?, active?, sortOrder? }
+ * @param params.id - NurseTitle UUID
+ * @returns JSON { title } or error
+ */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
@@ -29,6 +42,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Soft-deletes a nursing title (sets deletedAt and active: false).
+ * @param _req - Incoming request (unused)
+ * @param params.id - NurseTitle UUID
+ * @returns JSON { ok: true } or error
+ */
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {

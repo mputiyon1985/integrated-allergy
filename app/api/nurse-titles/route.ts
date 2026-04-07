@@ -1,6 +1,18 @@
 /**
- * GET  /api/nurse-titles   — List nurse titles
- * POST /api/nurse-titles   — Create a new nurse title
+ * @file /api/nurse-titles — Nurse title reference API
+ *
+ * @description
+ * Manages the configurable list of nursing title designations (e.g., RN, LPN, CMA)
+ * used in the nurse roster and patient enrollment forms.
+ *
+ * GET  /api/nurse-titles  — Returns all titles ordered by sortOrder then name.
+ *                           Query: ?active=true to return only active titles.
+ *
+ * POST /api/nurse-titles  — Creates a new nursing title designation.
+ *                           Required: name. Optional: sortOrder.
+ *                           Returns the created title with HTTP 201.
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -8,6 +20,11 @@ import prisma from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Lists all nursing title designations, sorted by sortOrder then name.
+ * @param req - Query params: active? (boolean string)
+ * @returns JSON { titles[] } with 30-second CDN cache
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -25,6 +42,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Creates a new nursing title designation.
+ * @param req - POST request. Body: { name: string, sortOrder? }
+ * @returns JSON { title } with HTTP 201, or 400/500 on failure
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as { name: string; sortOrder?: number };

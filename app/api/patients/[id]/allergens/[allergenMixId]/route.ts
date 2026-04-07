@@ -1,8 +1,19 @@
 /**
- * @file /api/patients/[id]/allergens/[allergenMixId]
+ * @file /api/patients/[id]/allergens/[allergenMixId] — Individual allergen mix entry API
  *
- * PATCH  — Update volumeMl on an existing AllergenMix record
- * DELETE — Soft-delete an AllergenMix record (sets deletedAt)
+ * @description
+ * Manages a single allergen entry in a patient's formulation mix.
+ *
+ * PATCH  /api/patients/[id]/allergens/[allergenMixId]
+ *   Updates the volume (mL) for this allergen in the mix.
+ *   Body: { volumeMl: number (must be > 0) }
+ *   Returns the updated mix entry.
+ *
+ * DELETE /api/patients/[id]/allergens/[allergenMixId]
+ *   Soft-deletes the allergen mix entry (sets deletedAt; data is retained).
+ *   Returns { success: true }.
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -12,6 +23,13 @@ type RouteParams = { params: Promise<{ id: string; allergenMixId: string }> };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Updates the volume for a single allergen mix entry.
+ * @param req - PATCH request. Body: { volumeMl: number }
+ * @param params.id - Patient UUID
+ * @param params.allergenMixId - AllergenMix UUID
+ * @returns JSON { id, allergenId, name, type, concentration, volume } or 400/404/500
+ */
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { id, allergenMixId } = await params;
   try {
@@ -55,6 +73,13 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Soft-deletes an allergen mix entry (sets deletedAt).
+ * @param _req - Incoming request (unused)
+ * @param params.id - Patient UUID
+ * @param params.allergenMixId - AllergenMix UUID
+ * @returns JSON { success: true } or 404/500
+ */
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { id, allergenMixId } = await params;
   try {

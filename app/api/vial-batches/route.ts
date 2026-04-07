@@ -55,6 +55,12 @@ interface VialBatchPayload {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Compounds a full 4-vial batch for a patient with safety validation.
+ * Resolves or auto-creates allergen records, creates vials, and logs the compounding event.
+ * @param req - POST request. Body: VialBatchPayload { patientId, batchName, preparedBy, verifiedBy?, notes?, glycerinPercent, targetVolumeMl, allergens[], vials[] }
+ * @returns JSON { success: true, patientId, vialIds[], warnings[] } with HTTP 201, or 400/500
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as VialBatchPayload;

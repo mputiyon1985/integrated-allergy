@@ -19,6 +19,14 @@ type RouteParams = { params: Promise<{ id: string; doseId: string }> };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Partially updates a dosing schedule entry. Most commonly used to mark a dose as administered.
+ * When administered is set to true, administeredAt is automatically set to now.
+ * @param req - PATCH request. Body (all optional): { administered?, reaction?, notes? }
+ * @param params.id - Patient UUID
+ * @param params.doseId - DosingSchedule UUID
+ * @returns JSON { dose } or 500
+ */
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { id, doseId } = await params;
   try {

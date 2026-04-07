@@ -1,7 +1,16 @@
 /**
- * GET    /api/users/[id]  — Get user by ID
- * PUT    /api/users/[id]  — Update user
- * DELETE /api/users/[id]  — Soft delete user
+ * @file /api/users/[id] — Single system user API
+ *
+ * @description
+ * CRUD operations for an individual system user account. All operations require super_admin role.
+ *
+ * GET    /api/users/[id]  — Returns user detail with entity and location access
+ * PUT    /api/users/[id]  — Updates user fields. Optionally resets password (bcrypt, cost 12).
+ *                           Replaces location access list if locationIds provided.
+ * DELETE /api/users/[id]  — Soft-deletes and deactivates the account.
+ *                           Cannot delete your own account.
+ *
+ * @security Requires super_admin role.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -11,6 +20,12 @@ import bcrypt from 'bcryptjs';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Returns a single user with entity and location access details.
+ * @param req - Incoming request. Must be authenticated as super_admin.
+ * @param params.id - AppUser UUID
+ * @returns JSON { user } or 401/403/404/500
+ */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await verifySession(req);
@@ -50,6 +65,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Updates a user account. Only provided fields are changed.
+ * Replaces location access list when locationIds is supplied.
+ * @param req - PUT request. Body (all optional): { name?, email?, password?, role?, entityId?, locationIds?, doctorId?, nurseId?, active? }
+ * @param params.id - AppUser UUID
+ * @returns JSON { user } or 400/401/403/409/500
+ */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await verifySession(req);
@@ -139,6 +161,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Soft-deletes and deactivates a user account. Cannot delete own account.
+ * @param req - Incoming request. Must be authenticated as super_admin.
+ * @param params.id - AppUser UUID
+ * @returns JSON { success: true } or 400/401/403/500
+ */
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await verifySession(req);

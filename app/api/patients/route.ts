@@ -20,6 +20,11 @@ import { nanoid } from 'nanoid';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns a paginated list of enrolled patients ordered by creation date (newest first).
+ * @param req - Query params: page? (default 1), limit? (default 50, max 200)
+ * @returns JSON { patients[], page, limit, total }
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
@@ -64,6 +69,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Enrolls a new patient. Auto-generates a patientId (PA-XXXXXXXX) if not provided.
+ * @param req - POST request. Body: { name? (or firstName+lastName), dob, physician, doctorId?, clinicLocation?, diagnosis?, startDate?, phone?, email?, insuranceId?, notes? }
+ * @returns JSON { id, patientId, name, dob, physician, status } with HTTP 201, or 400/500 on failure
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {

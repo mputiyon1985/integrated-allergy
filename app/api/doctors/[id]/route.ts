@@ -17,6 +17,12 @@ import prisma from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns a single physician record by ID.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Doctor UUID
+ * @returns JSON { doctor } or 404
+ */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,6 +40,12 @@ export async function GET(
   }
 }
 
+/**
+ * Updates physician fields. Only provided fields are changed.
+ * @param req - PUT request. Body (all optional): { name?, title?, specialty?, email?, phone?, clinicLocation?, npi?, photoUrl?, active? }
+ * @param params.id - Doctor UUID
+ * @returns JSON { doctor } or 404/500
+ */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -88,6 +100,12 @@ export async function PUT(
   }
 }
 
+/**
+ * Soft-deletes a physician (sets deletedAt and active: false; data is retained).
+ * @param _req - Incoming request (unused)
+ * @param params.id - Doctor UUID
+ * @returns JSON { success: true, doctor } or 404/500
+ */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

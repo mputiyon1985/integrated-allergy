@@ -1,6 +1,16 @@
 /**
- * GET  /api/entities — List all business entities (active + non-deleted)
- * POST /api/entities — Create a new business entity
+ * @file /api/entities — Business entity management API
+ *
+ * @description
+ * Manages the top-level business entity hierarchy (e.g., the parent company or clinic group).
+ * Each entity can have multiple locations. Used for multi-tenant configuration.
+ *
+ * GET  /api/entities  — Returns all non-deleted entities with their location count.
+ * POST /api/entities  — Creates a new business entity.
+ *                       Required: name. Optional: ein, phone, email, website, logo.
+ *                       Returns the created entity with HTTP 201.
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -9,6 +19,11 @@ import { verifySession } from '@/lib/auth/session';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all non-deleted business entities with their active location count.
+ * @param req - Incoming request (session checked via ia_session cookie)
+ * @returns JSON { entities[] } or 401
+ */
 export async function GET(req: NextRequest) {
   try {
     const session = await verifySession(req);
@@ -29,6 +44,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Creates a new business entity.
+ * @param req - POST request. Body: { name: string, ein?, phone?, email?, website?, logo? }
+ * @returns JSON { entity } with HTTP 201, or 400/401/500 on failure
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await verifySession(req);

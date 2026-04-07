@@ -1,6 +1,19 @@
 /**
- * GET  /api/users  — List all users with entity/location info
- * POST /api/users  — Create a new user
+ * @file /api/users — System user management API
+ *
+ * @description
+ * Manages application user accounts. Accessible only to super_admin role.
+ * Users are linked to business entities and specific clinic locations for access scoping.
+ *
+ * GET  /api/users  — Returns all non-deleted users with entity name and location access list.
+ *
+ * POST /api/users  — Creates a new system user.
+ *                    Required: name, email, password.
+ *                    Optional: role (default: location_staff), entityId, locationIds[], doctorId, nurseId, active.
+ *                    Password must meet strength requirements. Email must be unique.
+ *                    Returns { user } with HTTP 201.
+ *
+ * @security Requires super_admin role. Passwords are bcrypt-hashed (cost 12).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -11,6 +24,11 @@ import bcrypt from 'bcryptjs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all non-deleted users with entity name and location access details.
+ * @param req - Incoming request. Must be authenticated as super_admin.
+ * @returns JSON { users[] } or 401/403/500
+ */
 export async function GET(req: NextRequest) {
   try {
     const session = await verifySession(req);
@@ -50,6 +68,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Creates a new system user account.
+ * @param req - POST request. Body: { name, email, password, role?, entityId?, locationIds?, doctorId?, nurseId?, active? }
+ * @returns JSON { user: { id, name, email, role } } with HTTP 201, or 400/401/403/409/500
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await verifySession(req);

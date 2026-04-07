@@ -21,6 +21,12 @@ type RouteParams = { params: Promise<{ id: string }> };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns the patient's current allergen mix with full allergen details.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Patient UUID
+ * @returns JSON { allergens[] } with allergenId, name, type, concentration, volume
+ */
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
@@ -43,6 +49,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Adds a single allergen entry to the patient's mix. Looks up or creates the allergen by name if allergenId is not provided.
+ * @param req - POST request. Body: { allergenId? | name, type?, concentration?, volumeMl? }
+ * @param params.id - Patient UUID
+ * @returns JSON { id, allergenId, name, type, concentration, volume } with HTTP 201, or 400/404/500
+ */
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {

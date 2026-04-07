@@ -18,6 +18,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/** @internal Maps DB status values to display labels. */
 const STATUS_DISPLAY: Record<string, string> = {
   'build-up':    'Build-Up',
   'maintenance': 'Maintenance',
@@ -32,6 +33,12 @@ const STATUS_DB: Record<string, string> = {
   'Inactive':    'inactive',
 };
 
+/**
+ * Returns full patient detail including related allergen mix, vials, dosing schedule, and audit log.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Patient UUID
+ * @returns JSON { patient, allergens[], vials[], dosing[], audit[] } or 404
+ */
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
 
@@ -147,6 +154,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Updates patient fields. Only provided fields are changed. Accepts display-form or DB-form status values.
+ * @param req - PUT request. Body (all optional): { name?, dob?, physician?, doctorId?, clinicLocation?, diagnosis?, startDate?, phone?, email?, insuranceId?, notes?, status? }
+ * @param params.id - Patient UUID
+ * @returns JSON { id, success: true } or 400/500
+ */
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
@@ -215,11 +228,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Partial update of patient fields — delegates to PUT for consistency.
+ * @param req - PATCH request with partial patient body
+ * @param params.id - Patient UUID
+ * @returns JSON { id, success: true } or error
+ */
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   // Delegate to PUT for consistency
   return PUT(req, { params });
 }
 
+/**
+ * Soft-deletes a patient (sets deletedAt; all clinical data is retained).
+ * @param _req - Incoming request (unused)
+ * @param params.id - Patient UUID
+ * @returns JSON { success: true } or 404/500
+ */
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {

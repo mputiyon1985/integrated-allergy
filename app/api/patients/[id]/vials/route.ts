@@ -23,6 +23,12 @@ type RouteParams = { params: Promise<{ id: string }> }
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all vials for a patient ordered by vial number (1–4), including linked doses.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Patient UUID
+ * @returns JSON array of Vial records with nested doses[], or 404/500
+ */
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
@@ -40,6 +46,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Generates a new 4-vial AAAI dilution series for the patient using the clinical dilution engine.
+ * Validates glycerin percentage before creating vials. Warns on proteolytic incompatibilities.
+ * @param req - POST request. Body: { glycerinPercent?: number (default 10) }
+ * @param params.id - Patient UUID
+ * @returns JSON { vials[], warnings[] } with HTTP 201, or 400/404/500 on failure
+ */
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params

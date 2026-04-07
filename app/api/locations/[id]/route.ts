@@ -1,13 +1,26 @@
 /**
- * GET    /api/locations/[id]  — Get one location
- * PUT    /api/locations/[id]  — Update (name, address, phone, active, sortOrder, entityId)
- * DELETE /api/locations/[id]  — Soft delete
+ * @file /api/locations/[id] — Single clinic location API
+ *
+ * @description
+ * CRUD operations for an individual clinic location record.
+ *
+ * GET    /api/locations/[id]  — Returns a single location by ID
+ * PUT    /api/locations/[id]  — Updates name, address, phone, active, sortOrder, or entityId
+ * DELETE /api/locations/[id]  — Soft-deletes and deactivates the location
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Returns a single clinic location by ID.
+ * @param _req - Incoming request (unused)
+ * @param params.id - ClinicLocation UUID
+ * @returns JSON { location } or 404
+ */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const location = await prisma.clinicLocation.findUnique({ where: { id } });
@@ -15,6 +28,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({ location });
 }
 
+/**
+ * Updates a clinic location's fields.
+ * @param req - PUT request. Body (all optional): { name?, address?, phone?, active?, sortOrder?, entityId? }
+ * @param params.id - ClinicLocation UUID
+ * @returns JSON { location } or error
+ */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
@@ -47,6 +66,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Soft-deletes a clinic location (sets deletedAt and active: false).
+ * @param _req - Incoming request (unused)
+ * @param params.id - ClinicLocation UUID
+ * @returns JSON { ok: true } or error
+ */
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {

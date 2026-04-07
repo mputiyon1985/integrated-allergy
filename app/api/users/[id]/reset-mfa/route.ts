@@ -1,7 +1,16 @@
 /**
+ * @file /api/users/[id]/reset-mfa — Admin MFA reset endpoint
+ *
+ * @description
+ * Allows a super_admin to reset another user's TOTP MFA enrollment.
+ * After reset, the user will be required to set up MFA again on their next login.
+ *
  * POST /api/users/[id]/reset-mfa
- * Resets MFA for a user — clears mfaSecret and mfaEnabled.
- * Super admin only. Writes audit log.
+ *   Clears mfaSecret and sets mfaEnabled=false for the specified user.
+ *   Writes an audit log entry for the reset event.
+ *   Returns: { ok: true }
+ *
+ * @security Requires super_admin role (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -9,6 +18,12 @@ import { verifySession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Resets a user's MFA enrollment so they must re-enroll on next login.
+ * @param req - Incoming POST request. Must be authenticated as super_admin.
+ * @param params.id - AppUser UUID of the target user
+ * @returns JSON { ok: true } or 401/403/500
+ */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await verifySession(req);

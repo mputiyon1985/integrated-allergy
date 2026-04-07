@@ -1,12 +1,26 @@
 /**
- * One-time migration endpoint — creates DashboardStats table and seeds it.
- * Call POST /api/migrate-stats once after deploy, then it's a no-op.
+ * @file /api/migrate-stats — DashboardStats migration endpoint
+ *
+ * @description
+ * One-time migration utility that creates the DashboardStats denormalized table
+ * (if it doesn't exist) and seeds it with live counts. Safe to call repeatedly —
+ * uses INSERT ON CONFLICT DO UPDATE, so subsequent calls simply refresh the counts.
+ *
+ * POST /api/migrate-stats
+ *   Creates/refreshes the DashboardStats singleton row.
+ *   Returns: { ok: true, seeded: { totalPatients, activeDoctors, activeNurses } }
+ *
+ * @security Should be restricted to super_admin or deployment scripts in production.
  */
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Creates the DashboardStats table if absent, then seeds/refreshes the singleton row with live counts.
+ * @returns JSON { ok: true, seeded } or { ok: false, error }
+ */
 export async function POST() {
   try {
     // Create table if it doesn't exist

@@ -1,7 +1,14 @@
 /**
- * GET    /api/entities/[id] — Get one entity
- * PUT    /api/entities/[id] — Update entity fields
- * DELETE /api/entities/[id] — Soft delete
+ * @file /api/entities/[id] — Single business entity API
+ *
+ * @description
+ * CRUD operations for an individual business entity record.
+ *
+ * GET    /api/entities/[id]  — Returns a single entity by ID
+ * PUT    /api/entities/[id]  — Updates entity fields (name, ein, phone, email, website, logo, active)
+ * DELETE /api/entities/[id]  — Soft-deletes and deactivates the entity
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -9,6 +16,12 @@ import { verifySession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Returns a single business entity by ID.
+ * @param req - Incoming request (session checked via ia_session cookie)
+ * @param params.id - BusinessEntity UUID
+ * @returns JSON { entity } or 401/404
+ */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await verifySession(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,6 +32,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json({ entity });
 }
 
+/**
+ * Updates a business entity's fields.
+ * @param req - PUT request. Body (all optional): { name?, ein?, phone?, email?, website?, logo?, active? }
+ * @param params.id - BusinessEntity UUID
+ * @returns JSON { entity } or 401/500
+ */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await verifySession(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -64,6 +83,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Soft-deletes a business entity (sets deletedAt and active: false).
+ * @param req - Incoming request (session checked via ia_session cookie)
+ * @param params.id - BusinessEntity UUID
+ * @returns JSON { ok: true } or 401/500
+ */
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await verifySession(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

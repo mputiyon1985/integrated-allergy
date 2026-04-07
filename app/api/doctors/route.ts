@@ -21,6 +21,11 @@ import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all physicians ordered by name, optionally filtered to active only.
+ * @param req - Query params: active? (boolean string)
+ * @returns JSON { doctors[] } with 30-second CDN cache
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -40,6 +45,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Adds a new physician to the clinic roster.
+ * @param req - POST request. Body: { name: string, title?, specialty?, email?, phone?, clinicLocation?, npi?, photoUrl? }
+ * @returns JSON { doctor } with HTTP 201, or 400/500 on failure
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {
