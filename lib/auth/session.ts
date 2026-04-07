@@ -17,9 +17,12 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'integrated-allergy-secret-key-change-in-production'
-);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+const secret = jwtSecret || 'integrated-allergy-dev-secret-only';
+const JWT_SECRET = new TextEncoder().encode(secret);
 
 const SESSION_COOKIE = 'ia_session';
 const _TEMP_COOKIE_PREFIX = 'ia_temp_';

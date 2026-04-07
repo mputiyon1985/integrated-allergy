@@ -12,8 +12,9 @@
  *
  * @security Should be restricted to super_admin or deployment scripts in production.
  */
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { verifySession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,14 @@ export const dynamic = 'force-dynamic';
  * Creates the DashboardStats table if absent, then seeds/refreshes the singleton row with live counts.
  * @returns JSON { ok: true, seeded } or { ok: false, error }
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const session = await verifySession(req);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (session.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Forbidden: super_admin required' }, { status: 403 });
+  }
   try {
     // Create table if it doesn't exist
     await prisma.$executeRaw`

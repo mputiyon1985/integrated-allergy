@@ -95,9 +95,10 @@ export async function POST(req: NextRequest) {
       patient = null;
     }
 
-    // If patient not found in DB, we still proceed (demo/mock mode) but return
-    // the response with a flag. The audit log creation will be attempted.
-    const patientName = patient?.name ?? 'Unknown Patient';
+    if (!patient) {
+      return NextResponse.json({ error: 'Patient not found. Cannot create vial batch for unknown patient.' }, { status: 400 });
+    }
+    const patientName = patient.name;
 
     // --- Create AllergenMix records ---
     const vialIds: string[] = [];

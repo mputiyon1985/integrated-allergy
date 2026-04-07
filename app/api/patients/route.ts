@@ -17,6 +17,7 @@ import prisma from '@/lib/db';
 import { HIPAA_HEADERS } from '@/lib/hipaaHeaders';
 import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 import { nanoid } from 'nanoid';
+import { verifySession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,10 @@ export const dynamic = 'force-dynamic';
  * @returns JSON { patients[], page, limit, total }
  */
 export async function GET(req: NextRequest) {
+  const session = await verifySession(req);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { searchParams } = req.nextUrl;
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));

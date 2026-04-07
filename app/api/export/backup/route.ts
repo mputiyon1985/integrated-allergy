@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { HIPAA_HEADERS } from '@/lib/hipaaHeaders';
+import { verifySession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,13 @@ export const dynamic = 'force-dynamic';
  * @returns JSON file download or 500 error
  */
 export async function GET(req: NextRequest) {
+  const session = await verifySession(req);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (session.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Forbidden: super_admin required' }, { status: 403 });
+  }
   try {
     // HIPAA: log PHI export to audit trail
     await prisma.auditLog.create({

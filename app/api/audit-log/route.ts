@@ -17,6 +17,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { verifySession } from '@/lib/auth/session';
 
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,10 @@ export const dynamic = 'force-dynamic';
  * @returns JSON { entries[], total, limit, offset }
  */
 export async function GET(req: NextRequest) {
+  const session = await verifySession(req);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(req.url);
     const patientId = searchParams.get('patientId');

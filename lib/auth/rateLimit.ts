@@ -2,6 +2,13 @@
  * Persistent rate limiter using the database.
  * Stores login attempt counts per IP in AuditLog or a dedicated table.
  * HIPAA-compliant: survives serverless cold starts.
+ *
+ * Rate limit sequence (enforced in login route):
+ *  1. Count recent failures for identifier
+ *  2. If count >= maxAttempts → return 429 (deny BEFORE validating credentials)
+ *  3. Validate credentials
+ *  4. If credentials fail → log failure FIRST, then return 401
+ * This ensures exactly maxAttempts (5) attempts before lockout, with no off-by-one.
  */
 import prisma from '@/lib/db';
 
@@ -19,6 +26,7 @@ export async function checkLoginRateLimit(identifier: string): Promise<{ allowed
     },
   });
 
+  // Block when recentAttempts >= maxAttempts (equivalent to: !allowed when count >= 5)
   return {
     allowed: recentAttempts < maxAttempts,
     remaining: Math.max(0, maxAttempts - recentAttempts),
