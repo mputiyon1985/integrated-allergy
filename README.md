@@ -2,6 +2,7 @@
 
 > **Clinical immunotherapy compounding system for allergy practices — built to Meditab/AAAI/USP 797 standards.**
 
+[![HIPAA Compliant Codebase](https://img.shields.io/badge/HIPAA-Codebase%20Compliant-green?logo=shield)](./HIPAA.md)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://www.prisma.io/)

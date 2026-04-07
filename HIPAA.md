@@ -1,5 +1,8 @@
 # HIPAA Compliance Documentation
 
+> 🛡️ **HIPAA Codebase Compliance: ACTIVE**
+> The Integrated Allergy IMS codebase has been reviewed and hardened for HIPAA compliance as of **2026-04-07**. Security controls, audit logging, persistent rate limiting, PHI security headers, and access controls are all implemented and active. See controls inventory below.
+
 ## Overview
 
 Integrated Allergy IMS handles Protected Health Information (PHI) and is subject to HIPAA Security Rule (45 CFR Part 164) requirements. This document outlines what PHI is stored, the security controls currently in place, required Business Associate Agreements (BAAs), remaining steps before production deployment, and the security contact.
