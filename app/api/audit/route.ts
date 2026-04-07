@@ -16,6 +16,11 @@ import prisma from '@/lib/db'
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns paginated audit log entries (alias of /api/audit-log for backward compatibility).
+ * @param req - Query params: patientId?, entity?, limit? (max 500), offset?
+ * @returns JSON { logs[], total, limit, offset }
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)

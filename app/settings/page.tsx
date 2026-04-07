@@ -1,3 +1,20 @@
+/**
+ * @file app/settings/page.tsx — Application settings and administration page
+ *
+ * Super admin configuration panel for the IMS. Settings panels are rendered in a
+ * responsive drag-and-drop grid (DraggableSettingsGrid) that super_admins can rearrange.
+ *
+ * Configuration panels include:
+ * - Clinic branding (name, tagline, logo, version label)
+ * - MFA policy (require MFA for all users)
+ * - Session timeout duration
+ * - Diagnosis options (ICD-10 codes for patient enrollment)
+ * - Doctor credential titles
+ * - Nurse credential titles
+ * - Entity and location management
+ * - User management (link to /users)
+ * - Data export (patients CSV, audit log CSV, full backup)
+ */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';

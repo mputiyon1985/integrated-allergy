@@ -1,3 +1,11 @@
+/**
+ * @file app/nurses/page.tsx — Nursing staff roster management page
+ *
+ * Displays, creates, edits, and toggles active status for nurse records.
+ * Mirrors the doctors page structure. Nursing credential titles (RN, LPN, MA, etc.)
+ * are loaded from the Settings API (NurseTitle model) with a hardcoded fallback list.
+ * Supports active/inactive filter toggle and photo URL entry.
+ */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';

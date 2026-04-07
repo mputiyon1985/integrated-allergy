@@ -1,3 +1,23 @@
+/**
+ * @file /api/auth/mfa-setup — TOTP MFA enrollment endpoint
+ *
+ * @description
+ * Handles two-step MFA setup for users who don't yet have TOTP configured.
+ * Uses speakeasy for TOTP generation/verification and qrcode for QR rendering.
+ *
+ * GET /api/auth/mfa-setup?token=<tempToken>
+ *   Generates a new TOTP secret and QR code for the user to scan.
+ *   Requires a valid temp JWT with purpose='mfa_setup'.
+ *   Returns: { secret: string, qrCode: string (data URL), otpauthUrl: string }
+ *
+ * POST /api/auth/mfa-setup
+ *   Body: { tempToken, secret, code }
+ *   Verifies the first TOTP code to confirm the user scanned correctly.
+ *   On success: saves the secret, enables MFA, and issues the full session cookie.
+ *   Returns: { success: true, user }
+ *
+ * @security Requires valid temp JWT (30m window). TOTP verified with window=1 (±30 sec).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';

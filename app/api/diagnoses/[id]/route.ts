@@ -1,13 +1,26 @@
 /**
- * GET    /api/diagnoses/[id]  — Get one diagnosis
- * PUT    /api/diagnoses/[id]  — Update
- * DELETE /api/diagnoses/[id]  — Soft delete
+ * @file /api/diagnoses/[id] — Single diagnosis option API
+ *
+ * @description
+ * CRUD operations for an individual diagnosis option record.
+ *
+ * GET    /api/diagnoses/[id]  — Returns a single diagnosis option
+ * PUT    /api/diagnoses/[id]  — Updates name, icdCode, active, or sortOrder
+ * DELETE /api/diagnoses/[id]  — Soft-deletes and deactivates the option
+ *
+ * @security Requires authenticated session (ia_session cookie via proxy.ts)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Returns a single diagnosis option by ID.
+ * @param _req - Incoming request (unused)
+ * @param params.id - DiagnosisOption UUID
+ * @returns JSON { diagnosis } or 404
+ */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const diagnosis = await prisma.diagnosisOption.findUnique({ where: { id } });
@@ -15,6 +28,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({ diagnosis });
 }
 
+/**
+ * Updates a diagnosis option's fields.
+ * @param req - PUT request. Body (all optional): { name?, icdCode?, active?, sortOrder? }
+ * @param params.id - DiagnosisOption UUID
+ * @returns JSON { diagnosis } or error
+ */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
@@ -38,6 +57,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/**
+ * Soft-deletes a diagnosis option (sets deletedAt and active: false).
+ * @param _req - Incoming request (unused)
+ * @param params.id - DiagnosisOption UUID
+ * @returns JSON { ok: true } or error
+ */
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {

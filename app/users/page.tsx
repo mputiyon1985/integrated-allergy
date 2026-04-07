@@ -1,3 +1,17 @@
+/**
+ * @file app/users/page.tsx — User account management page
+ *
+ * Super admin interface for managing AppUser accounts across all business entities.
+ * Supports creating, editing, toggling active status, resetting MFA, and viewing
+ * location access assignments for each user.
+ *
+ * Features:
+ * - Role-based filtering (super_admin, entity_admin, location_staff, doctor, nurse)
+ * - Entity assignment and location access management
+ * - MFA status display and reset capability
+ * - Password set on user creation (hashed server-side)
+ * - Inline status toggle (active / inactive)
+ */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';

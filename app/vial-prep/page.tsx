@@ -1,3 +1,16 @@
+/**
+ * @file app/vial-prep/page.tsx — Vial preparation overview page
+ *
+ * Displays all compounded allergen extract vials across all patients.
+ * Vials are grouped by patient and color-coded per the AAAI 4-vial dilution series.
+ * Safety alerts surface any allergen incompatibilities or expiring vials.
+ *
+ * Features:
+ * - VialCard tiles for each compounded vial (Silver/Blue/Yellow/Red)
+ * - SafetyAlert banners for expiring or incompatible vials
+ * - Link to /vial-prep/new to create a new vial batch for a patient
+ * - Filter by patient name or vial status
+ */
 'use client';
 
 import { useEffect, useState } from 'react';

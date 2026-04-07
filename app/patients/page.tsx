@@ -1,3 +1,16 @@
+/**
+ * @file app/patients/page.tsx — Patient roster list page
+ *
+ * Displays a searchable, paginated table of all enrolled patients.
+ * Clicking a row or the "View" button navigates to the patient's detail page.
+ *
+ * Features:
+ * - Live client-side search filtering by name, patient ID, physician, or diagnosis
+ * - Status badge color coding (Build-Up / Maintenance / Complete / Inactive)
+ * - Skeleton loading rows while data is fetched
+ * - Error banner if the API call fails
+ * - "New Patient" action button linking to /patients/new
+ */
 'use client';
 
 import { useEffect, useState } from 'react';

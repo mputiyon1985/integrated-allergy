@@ -1,3 +1,20 @@
+/**
+ * @file /api/auth/change-password — Self-service password change
+ *
+ * @description
+ * Allows an authenticated user to change their own password.
+ * Validates current password, enforces minimum strength policy,
+ * and writes an audit log entry on success.
+ *
+ * POST /api/auth/change-password
+ *   Body: { currentPassword: string, newPassword: string }
+ *   - 200: { success: true }
+ *   - 400: { error } — missing fields or password too weak
+ *   - 401: { error } — unauthenticated or wrong current password
+ *   - 404: { error } — user account not found
+ *
+ * @security Requires authenticated session. New password hashed with bcrypt (cost 12).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db';
@@ -6,6 +23,11 @@ import { isStrongPassword } from '@/lib/auth/password';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Changes the authenticated user's password after verifying their current password.
+ * @param req - POST request with { currentPassword, newPassword } body
+ * @returns JSON { success: true } or error
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await verifySession(req);

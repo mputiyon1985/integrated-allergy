@@ -1,3 +1,17 @@
+/**
+ * @file app/vial-prep/new/VialBatchClient.tsx — New vial batch compounding wizard
+ *
+ * Multi-step wizard for generating a new 4-vial allergen extract batch for a patient.
+ *
+ * Steps:
+ * 1. **Patient selection** — Search and select an enrolled patient
+ * 2. **Allergen mix review** — View the patient's existing allergen mix; add/remove allergens
+ * 3. **Safety checks** — Run validateAllergenMix + validateGlycerin; display SafetyAlerts
+ * 4. **Confirm & generate** — Show the 4-vial preview (VialCard) and submit to API
+ *
+ * On success, navigates to the patient detail page. Reads searchParams for pre-selecting
+ * a patient when navigated from the patient detail page.
+ */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';

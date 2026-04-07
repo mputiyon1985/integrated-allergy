@@ -1,3 +1,16 @@
+/**
+ * @file app/patients/new/page.tsx — New Patient enrollment form
+ *
+ * Multi-section form for enrolling a new patient in the immunotherapy program.
+ * Collects demographic info, physician assignment, clinic location, diagnosis,
+ * and treatment start date. On successful submission, redirects to the new
+ * patient's detail page.
+ *
+ * Features:
+ * - Fetches active doctors and diagnosis options from the API for dropdown selection
+ * - Custom title support via Settings API (falls back to clinic defaults)
+ * - Inline validation feedback before API submission
+ */
 'use client';
 
 import { useState, useEffect } from 'react';

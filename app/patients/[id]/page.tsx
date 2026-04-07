@@ -1,3 +1,9 @@
+/**
+ * @file app/patients/[id]/page.tsx — Patient detail page (server shell)
+ *
+ * Wraps the PatientDetailClient in a Suspense boundary so the page renders
+ * a loading fallback while the client component hydrates and fetches patient data.
+ */
 import { Suspense } from 'react';
 import PatientDetailClient from './PatientDetailClient';
 

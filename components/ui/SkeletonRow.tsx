@@ -1,3 +1,15 @@
+/**
+ * @file components/ui/SkeletonRow.tsx — Loading skeleton placeholder for table rows
+ *
+ * Renders an animated shimmer table row used while table data is loading.
+ * Each cell shows a shimmer bar with varying widths to simulate real content.
+ * Used in clinical-table components (patients list, doctors, nurses, etc.).
+ */
+
+/**
+ * A shimmering placeholder table row for use inside a `<tbody>`.
+ * @param cols - Number of table cells to render (default: 5)
+ */
 export function SkeletonRow({ cols = 5 }: { cols?: number }) {
   const widths = ['40px', '80%', '60%', '50%', '70%', '45%', '35%', '55%'];
   return (

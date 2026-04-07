@@ -20,6 +20,10 @@ import prisma from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns all non-deleted allergens sorted alphabetically.
+ * @returns JSON { allergens: AllergenShape[] } with 30-second CDN cache
+ */
 export async function GET() {
   try {
     const allergens = await prisma.allergen.findMany({
@@ -44,6 +48,11 @@ export async function GET() {
   }
 }
 
+/**
+ * Adds a new allergen to the clinic library.
+ * @param req - POST request. Body: { name: string, type?, manufacturer?, lotNumber?, stockConcentration?, expiryDate? }
+ * @returns JSON { allergen } with HTTP 201, or error
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {

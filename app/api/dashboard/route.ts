@@ -23,6 +23,13 @@ import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Returns aggregated dashboard KPIs and recent audit activity.
+ * Uses an in-memory 30-second cache and a pre-computed DashboardStats singleton row when available.
+ * Falls back to live parallel Prisma queries if the DashboardStats table does not yet exist.
+ * @returns JSON { stats, activity[] } with 30-second CDN cache
+ */
+
 // In-memory cache — skips DB on warm lambda hits
 let cachedPayload: Record<string, unknown> | null = null;
 let cacheExpiresAt = 0;

@@ -1,3 +1,16 @@
+/**
+ * @file app/calendar/CalendarClient.tsx — Appointment calendar client component
+ *
+ * Interactive calendar view showing all patient appointments (shots, skin tests,
+ * evaluations, follow-ups). Supports monthly, weekly, and list views.
+ * Allows creating, editing, and cancelling appointments with inline modals.
+ *
+ * Features:
+ * - Date-range navigation (previous/next month or week)
+ * - Appointment type color-coding
+ * - Create/edit modal with patient search, type selection, and time picker
+ * - Reads searchParams for pre-selecting a date on navigation from other pages
+ */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';

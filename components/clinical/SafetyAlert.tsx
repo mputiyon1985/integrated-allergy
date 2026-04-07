@@ -1,12 +1,31 @@
+/**
+ * @file components/clinical/SafetyAlert.tsx — Clinical safety warning banner
+ *
+ * Displays a color-coded safety alert for clinical warnings (yellow) or
+ * danger conditions (red). Used in the vial preparation workflow to surface
+ * allergen incompatibility warnings and glycerin limit violations from the
+ * safety validation engine (lib/clinical/safety.ts).
+ */
 'use client';
 
+/**
+ * Props for the SafetyAlert component.
+ */
 interface SafetyAlertProps {
+  /** 'warning' renders a yellow cautionary banner; 'danger' renders a red blocking alert */
   level: 'warning' | 'danger';
+  /** Short headline message (e.g., "Proteolytic degradation risk") */
   message: string;
+  /** Optional longer explanation shown below the headline */
   detail?: string;
+  /** If provided, shows a dismiss (×) button that calls this handler */
   onDismiss?: () => void;
 }
 
+/**
+ * Renders a dismissible safety alert banner with an icon, message, and optional detail.
+ * Warning alerts use a triangle icon; danger alerts use a circle-info icon.
+ */
 export default function SafetyAlert({ level, message, detail, onDismiss }: SafetyAlertProps) {
   const isWarning = level === 'warning';
 

@@ -1,3 +1,16 @@
+/**
+ * @file app/audit-log/page.tsx — Clinical audit trail viewer
+ *
+ * Displays the immutable audit log (AuditLog model) showing all create/update/delete
+ * actions performed in the system. Entries are color-coded by action type and linked
+ * to patient records where applicable.
+ *
+ * Features:
+ * - Paginated table (50 entries per page) with server-side pagination
+ * - Client-side search filtering by action, entity, user, or patient
+ * - CSV export via /api/export/audit-log (super_admin only)
+ * - Action color badges (blue for doses, green for vials, etc.)
+ */
 'use client';
 
 import { useEffect, useState } from 'react';

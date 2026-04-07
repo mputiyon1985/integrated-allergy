@@ -1,3 +1,17 @@
+/**
+ * @file app/patients/[id]/PatientDetailClient.tsx — Patient detail client component
+ *
+ * Full patient record view for a single enrolled patient. Displays demographic info,
+ * physician assignment, allergen mix, compounded vials, dosing schedule, and appointments.
+ *
+ * Features:
+ * - Tabbed interface: Overview | Vials | Dosing Schedule | Appointments | Audit Log
+ * - Inline dose administration with reaction/notes editing via DosingTable
+ * - VialCard tiles for each compounded vial with status badges
+ * - SafetyAlert for vials nearing expiry
+ * - Edit patient info modal
+ * - Allergen mix management (add/remove allergens)
+ */
 'use client';
 
 import { useEffect, useState } from 'react';

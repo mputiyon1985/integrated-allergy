@@ -1,3 +1,20 @@
+/**
+ * @file lib/ui/theme.ts — Shared design tokens and UI constants
+ *
+ * @description
+ * Centralized color palette, vial color mappings, and patient status badge
+ * class names used across all React components.
+ *
+ * Vial colors follow the AAAI standard 4-vial color coding system:
+ * Silver (#1) → Blue (#2) → Yellow (#3) → Red (#4)
+ * matching the dilution series from most dilute to most concentrated.
+ *
+ * @example
+ * import { vialColorMap, theme } from '@/lib/ui/theme';
+ * const badge = vialColorMap['silver']; // { bg: '#9e9e9e', text: '#fff', label: 'Silver (#1)' }
+ */
+
+/** Application-wide color palette. Used for consistent theming across all pages. */
 export const theme = {
   colors: {
     sidebar: '#1a2233',
@@ -18,8 +35,13 @@ export const theme = {
   },
 } as const;
 
+/** Union type of the four AAAI standard vial color codes. */
 export type VialColor = 'silver' | 'blue' | 'yellow' | 'red';
 
+/**
+ * Maps each vial color to its display background, text color, and label.
+ * Used by VialCard and DosingTable to render color-coded vial badges.
+ */
 export const vialColorMap: Record<VialColor, { bg: string; text: string; label: string }> = {
   silver: { bg: '#9e9e9e', text: '#fff', label: 'Silver (#1)' },
   blue: { bg: '#1565c0', text: '#fff', label: 'Blue (#2)' },
@@ -27,8 +49,13 @@ export const vialColorMap: Record<VialColor, { bg: string; text: string; label: 
   red: { bg: '#c62828', text: '#fff', label: 'Red (#4)' },
 };
 
+/** Union type of patient treatment statuses displayed in the UI. */
 export type PatientStatus = 'Build-Up' | 'Maintenance' | 'Complete' | 'Inactive';
 
+/**
+ * Maps each patient status to its CSS class name for badge rendering.
+ * Classes are defined in globals.css (.badge-buildup, .badge-maintenance, etc.).
+ */
 export const statusBadgeClass: Record<PatientStatus, string> = {
   'Build-Up': 'badge badge-buildup',
   'Maintenance': 'badge badge-maintenance',

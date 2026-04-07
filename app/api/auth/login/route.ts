@@ -1,3 +1,23 @@
+/**
+ * @file /api/auth/login — User authentication endpoint
+ *
+ * @description
+ * Authenticates users with email/password and handles the MFA flow.
+ * Includes an in-memory rate limiter (5 attempts per 15-minute window) to
+ * prevent brute-force attacks. Rate limits reset on server restart.
+ *
+ * POST /api/auth/login
+ *   Body: { email: string, password: string }
+ *   Responses:
+ *   - MFA disabled globally: Sets ia_session cookie, returns { success: true, user }
+ *   - MFA required (already set up): Returns { requiresMfa: true, tempToken }
+ *   - MFA setup needed: Returns { requiresMfaSetup: true, tempToken }
+ *   - Invalid credentials: 401 { error }
+ *   - Rate limited: 429 { error }
+ *
+ * @security Passwords are compared with bcrypt (cost factor 12).
+ *           Same error message returned for unknown email vs wrong password (prevents user enumeration).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getUserByEmail, getUserLocationIds, getDoctorById, getNurseById, getSettings } from '@/lib/auth/turso';
@@ -11,6 +31,13 @@ const loginAttempts = (globalThis as any).__loginAttempts ??
   new Map<string, { count: number; resetAt: number }>();
 (globalThis as any).__loginAttempts = loginAttempts;
 
+/**
+ * Handles user login with email/password credentials.
+ * Enforces rate limiting, validates credentials, and initiates the MFA flow
+ * or issues a session directly depending on global settings.
+ * @param req - Incoming POST request with { email, password } body
+ * @returns JSON response indicating success, MFA requirement, or error
+ */
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();

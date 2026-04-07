@@ -1,3 +1,16 @@
+/**
+ * @file components/layout/Sidebar.tsx — Application navigation sidebar
+ *
+ * The primary navigation component rendered on all authenticated pages.
+ * Features:
+ * - Clinic logo and branding from Settings API
+ * - Navigation links with active state highlighting and hover prefetching
+ * - User identity card showing logged-in name/role
+ * - Sign Out button (calls /api/auth/logout then redirects to /login)
+ * - Change Password modal (calls /api/auth/change-password)
+ * - Route-level API prefetching on nav hover (warms data before page load)
+ * - Mobile responsive with close button (onClose prop)
+ */
 'use client';
 
 import Link from 'next/link';

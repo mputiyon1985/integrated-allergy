@@ -1,20 +1,44 @@
+/**
+ * @file components/dashboard/KpiCard.tsx — Individual KPI metric card
+ *
+ * A single stat card used on the dashboard to display a clinical KPI.
+ * When an href is provided and editMode is false, the card is wrapped in a Next.js Link.
+ * Hover shadow effect gives subtle depth feedback. In editMode, a drag handle indicator
+ * appears and the cursor changes to a grab cursor.
+ */
 'use client';
 
 import Link from 'next/link';
 import { useState } from 'react';
 
+/**
+ * Props for the KpiCard component.
+ */
 interface KpiCardProps {
+  /** Short metric label shown above the value (e.g., "Total Patients") */
   label: string;
+  /** Emoji icon displayed at the top of the card */
   icon: string;
+  /** The numeric KPI value to display prominently */
   value: number;
+  /** Subtitle shown below the value (e.g., "Enrolled in IMS") */
   sub: string;
+  /** Optional italic note appended to the subtitle in parentheses */
   note?: string;
+  /** CSS color string for the value text (changes to red/orange for danger thresholds) */
   valueColor: string;
+  /** When true, renders a drag handle and changes cursor to 'grab' */
   editMode: boolean;
+  /** If provided (and not in editMode), wraps the card in a Link to this path */
   href?: string;
 }
 
+/**
+ * Renders a single KPI metric card. Optionally navigable via Link when href is set.
+ * Elevation increases on hover. Edit mode overlays a drag handle affordance.
+ */
 export function KpiCard({ label, icon, value, sub, note, valueColor, editMode, href }: KpiCardProps) {
+  // Tracks hover state for box-shadow elevation transition
   const [hovered, setHovered] = useState(false);
 
   const inner = (

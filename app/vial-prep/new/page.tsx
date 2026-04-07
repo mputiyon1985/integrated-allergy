@@ -1,3 +1,10 @@
+/**
+ * @file app/vial-prep/new/page.tsx — New vial batch wizard page (server shell)
+ *
+ * Wraps VialBatchClient in a Suspense boundary. The client component implements
+ * a multi-step wizard for selecting a patient, reviewing their allergen mix,
+ * confirming safety checks, and generating a new 4-vial compounding batch.
+ */
 import { Suspense } from 'react';
 import VialBatchClient from './VialBatchClient';
 

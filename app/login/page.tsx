@@ -1,9 +1,27 @@
+/**
+ * @file app/login/page.tsx — Authentication login page
+ *
+ * Multi-step login flow:
+ * 1. `credentials` — Email + password form. On success, either:
+ *    a. Issues session directly (MFA disabled globally), or
+ *    b. Advances to MFA verify/setup step with a temp token.
+ * 2. `mfa-verify` — 6-digit TOTP code entry for users with MFA already set up.
+ * 3. `mfa-setup` — QR code display + first-time TOTP verification for new users.
+ *
+ * On successful authentication, redirects to /dashboard.
+ * Handles network errors, rate limiting (429), and invalid credential responses gracefully.
+ */
 'use client';
 
 import { useState } from 'react';
 
+/** Login form steps following the authentication flow. */
 type Step = 'credentials' | 'mfa-verify' | 'mfa-setup';
 
+/**
+ * The login page component managing the multi-step authentication flow.
+ * State machine: credentials → mfa-verify | mfa-setup → dashboard (redirect).
+ */
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');

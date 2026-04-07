@@ -1,22 +1,45 @@
+/**
+ * @file components/clinical/DosingTable.tsx — Immunotherapy dosing schedule table
+ *
+ * Displays and manages a patient's weekly injection schedule.
+ * When `editable` is true, reaction and notes cells become inline text inputs
+ * that commit on blur or Enter. Used in the patient detail view (PatientDetailClient).
+ */
 'use client';
 
 import { useState } from 'react';
 
+/** A single row in the dosing schedule table representing one weekly injection. */
 export interface DosingRow {
+  /** Database ID of the DosingSchedule record */
   id: string;
+  /** Sequential week number in the treatment course */
   week: number;
+  /** Vial label, e.g., "Silver #1" or "Blue #2" */
   vial: string;
+  /** Prescribed injection volume in milliliters */
   dose: number;
+  /** Treatment phase: 'Buildup' or 'Maintenance' */
   phase: string;
+  /** Current status of this dose */
   status: 'Scheduled' | 'Completed' | 'Skipped' | 'Reacted';
+  /** Clinical reaction recorded at time of injection (e.g., "local redness 5mm") */
   reaction?: string;
+  /** Additional clinical notes from the administering nurse or physician */
   notes?: string;
 }
 
+/**
+ * Props for the DosingTable component.
+ */
 interface DosingTableProps {
+  /** Array of dose rows to display */
   rows: DosingRow[];
+  /** When true, reaction and notes cells are editable inline. Default: false. */
   editable?: boolean;
+  /** Callback fired when a reaction or notes cell value is committed */
   onUpdate?: (id: string, field: 'reaction' | 'notes', value: string) => void;
+  /** Callback fired when the Administer/Undo button is clicked */
   onMarkAdministered?: (id: string, administered: boolean) => void;
 }
 
@@ -27,8 +50,15 @@ const statusStyle: Record<string, { bg: string; color: string }> = {
   Reacted: { bg: '#ffebee', color: '#c62828' },
 };
 
+/**
+ * Renders an interactive dosing schedule table with optional inline editing.
+ * Shows week number, vial, dose volume, phase, status badge, reaction, notes,
+ * and an administer/undo action button when onMarkAdministered is provided.
+ */
 export default function DosingTable({ rows, editable = false, onUpdate, onMarkAdministered }: DosingTableProps) {
+  // Tracks which cell (id + field) is currently being edited inline
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'reaction' | 'notes' } | null>(null);
+  // Holds the current value being typed in the active inline editor
   const [editValue, setEditValue] = useState('');
 
   const startEdit = (id: string, field: 'reaction' | 'notes', current: string) => {

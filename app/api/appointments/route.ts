@@ -21,6 +21,12 @@ import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns appointments filtered by optional query parameters.
+ * Defaults to the current calendar month if no date range is provided.
+ * @param req - Query params: patientId?, from? (ISO date), to? (ISO date), type?
+ * @returns JSON { appointments[] } with 15-second CDN cache
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -58,6 +64,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Creates a new patient appointment and logs the event to AuditLog.
+ * @param req - POST request. Body: { patientId, type, title, startTime, endTime, provider?, notes?, status? }
+ * @returns JSON { appointment } with HTTP 201, or 400/500 on failure
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {

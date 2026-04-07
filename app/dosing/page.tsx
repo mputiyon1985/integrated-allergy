@@ -1,3 +1,16 @@
+/**
+ * @file app/dosing/page.tsx — Today's injection doses administration page
+ *
+ * Shows all scheduled immunotherapy injection doses for today across all patients.
+ * Staff use this page to mark doses as administered and record clinical reactions.
+ *
+ * Features:
+ * - Filters to show only today's scheduled/pending doses by default
+ * - Inline "Administer" / "Undo" buttons updating dose status via API
+ * - Reaction notes editable inline (click to edit)
+ * - Patient name links to the patient detail page
+ * - Status badges (Scheduled, Completed, Skipped, Reacted)
+ */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';

@@ -1,3 +1,20 @@
+/**
+ * @file app/dashboard/page.tsx — Main dashboard page
+ *
+ * Displays 9 KPI cards and a vial expiry alert banner.
+ * KPI cards are rendered in a responsive drag-and-drop grid (DraggableKpiGrid)
+ * that super_admin users can rearrange. Layout is persisted to localStorage.
+ *
+ * Data loading:
+ * - Fetches /api/dashboard for stats and recent activity
+ * - Falls back to MOCK_STATS (all zeros) on network error to avoid crashes
+ * - Shows SkeletonCard placeholders during the initial load
+ *
+ * Edit mode (super_admin only):
+ * - Activated by the "Edit Layout" button in the top bar actions
+ * - Allows drag/resize of KPI cards; layout auto-saves to localStorage
+ * - "Reset Layout" button restores DEFAULT_LAYOUT and clears localStorage
+ */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';

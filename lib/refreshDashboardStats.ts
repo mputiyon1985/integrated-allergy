@@ -1,13 +1,31 @@
 /**
- * Refreshes the DashboardStats singleton row with live counts.
- * Call this after any mutation that affects dashboard KPIs:
+ * @file lib/refreshDashboardStats.ts — Dashboard KPI cache refresh
+ *
+ * @description
+ * Maintains a pre-computed DashboardStats singleton row in the database.
+ * This allows the dashboard API to serve all 10 KPIs with a single SELECT
+ * instead of running 10 parallel COUNT queries on every page load.
+ *
+ * The singleton row uses id='singleton' and is upserted via ON CONFLICT.
+ *
+ * Call refreshDashboardStats() fire-and-forget (void) after any mutation
+ * that affects these KPIs:
  * - Patient create/delete
  * - Vial create/delete/update
  * - Appointment create/delete
  * - DosingSchedule administered
  * - Doctor/Nurse create/toggle/delete
+ *
+ * Non-fatal: if the DashboardStats table doesn't exist yet (before migration),
+ * the error is swallowed and the dashboard falls back to live queries.
  */
 import prisma from '@/lib/db';
+
+/**
+ * Recomputes and upserts the DashboardStats singleton row with current live counts.
+ * This function is intentionally non-fatal — errors are caught and swallowed.
+ * @returns A Promise that resolves when the stats are updated (or on any error)
+ */
 
 export async function refreshDashboardStats(): Promise<void> {
   try {

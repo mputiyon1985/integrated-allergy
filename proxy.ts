@@ -1,3 +1,22 @@
+/**
+ * @file proxy.ts — Next.js middleware for JWT session authentication
+ *
+ * @description
+ * Acts as the application's authentication gateway. Every request passes through
+ * this middleware before reaching a page or API route.
+ *
+ * Behavior:
+ * - Public paths (/login, /api/auth/*) bypass auth checks.
+ * - Next.js internal paths (/_next, /favicon) are allowed through.
+ * - Authenticated requests have the JWT payload injected as request headers
+ *   (x-user-id, x-user-role, x-user-entity, x-user-locations) so API routes
+ *   can access the caller's identity without re-verifying the token.
+ * - Expired or invalid tokens redirect to /login?from=<original-path> and
+ *   clear the ia_session cookie.
+ *
+ * @security JWT is signed with HS256 using JWT_SECRET env var.
+ *           The ia_session cookie is httpOnly, secure in production, sameSite=strict.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 

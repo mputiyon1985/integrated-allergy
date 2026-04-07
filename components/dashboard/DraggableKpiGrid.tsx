@@ -1,3 +1,13 @@
+/**
+ * @file components/dashboard/DraggableKpiGrid.tsx — Responsive drag-and-drop KPI dashboard
+ *
+ * Renders all dashboard KPI cards in a responsive react-grid-layout grid.
+ * When editMode is true, cards become draggable and resizable. Layout changes
+ * are persisted to localStorage via the onLayoutChange callback.
+ *
+ * Dynamically imported (ssr: false) in the dashboard page to avoid SSR issues
+ * with react-grid-layout's useContainerWidth hook.
+ */
 'use client';
 
 import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
@@ -7,14 +17,27 @@ import 'react-resizable/css/styles.css';
 import { KpiCard } from './KpiCard';
 import type { DashboardStats, KpiDef } from './types';
 
+/**
+ * Props for the DraggableKpiGrid component.
+ */
 interface Props {
+  /** Current dashboard statistics from /api/dashboard */
   stats: DashboardStats;
+  /** Array of KPI card definitions controlling label, icon, value extraction, and color */
   kpiDefs: KpiDef[];
+  /** Current responsive layout configuration (saved to/restored from localStorage) */
   layouts: ResponsiveLayouts;
+  /** When true, cards become draggable and resizable (super_admin only) */
   editMode: boolean;
+  /** Fired when the user repositions or resizes a card; should persist the new layout */
   onLayoutChange: (layout: Layout, allLayouts: ResponsiveLayouts) => void;
 }
 
+/**
+ * Renders KPI cards in a responsive, optionally drag-and-drop grid.
+ * Cards with danger thresholds exceeded display in red/orange instead of their default color.
+ * Width is measured from the container ref; grid only renders after width is known (> 0).
+ */
 export default function DraggableKpiGrid({
   stats,
   kpiDefs,

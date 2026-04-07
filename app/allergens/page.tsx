@@ -1,3 +1,16 @@
+/**
+ * @file app/allergens/page.tsx — Allergen extract library management page
+ *
+ * CRUD interface for the clinic's allergen extract inventory.
+ * Each allergen record stores manufacturer, lot number, stock concentration,
+ * expiry date, and in-stock status. Allergens are later assigned to patient-specific
+ * AllergenMix records during vial compounding.
+ *
+ * Features:
+ * - Add, edit, and delete allergen records
+ * - Filter by type (mold, pollen, dust, etc.) and in-stock status
+ * - Stock toggle (in-stock / out-of-stock) with inline button
+ */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';

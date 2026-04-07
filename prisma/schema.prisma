@@ -1,5 +1,9 @@
 // Integrated Allergy IMS - Prisma Schema
 // https://pris.ly/d/prisma-schema
+//
+// Data model for the Integrated Allergy Practice Management System.
+// All clinical records use soft-delete (deletedAt timestamp) to preserve
+// audit history. Hard deletes are never performed on patient-linked data.
 
 generator client {
   provider = "prisma-client"
@@ -10,6 +14,10 @@ datasource db {
   provider = "sqlite"
 }
 
+/// Top-level organizational unit (practice group, hospital system, or independent clinic).
+/// All users, locations, patients, doctors, and nurses belong to a BusinessEntity.
+/// Supports multi-tenant deployments where multiple practices share the same database.
+/// Soft-deleted via deletedAt; active flag controls visibility in dropdowns.
 model BusinessEntity {
   id           String           @id @default(cuid())
   name         String
@@ -29,6 +37,11 @@ model BusinessEntity {
   appointments Appointment[]
 }
 
+/// Application user account (staff, physician, nurse, or super admin).
+/// Roles: super_admin | entity_admin | location_staff | doctor | nurse.
+/// MFA is enforced via speakeasy TOTP; mfaSecret is stored encrypted at rest by Turso.
+/// Users are soft-deleted (deletedAt) rather than hard-deleted to preserve audit history.
+/// doctorId / nurseId link the account to a clinical staff record for identity display.
 model AppUser {
   id             String               @id @default(cuid())
   email          String               @unique
@@ -47,6 +60,9 @@ model AppUser {
   locationAccess UserLocationAccess[]
 }
 
+/// Junction table granting a user access to a specific clinic location.
+/// location_staff role users may only access locations listed here.
+/// entity_admin and super_admin bypass this table — they access all locations.
 model UserLocationAccess {
   id         String         @id @default(cuid())
   userId     String
@@ -56,6 +72,11 @@ model UserLocationAccess {
   createdAt  DateTime       @default(now())
 }
 
+/// Core patient record for an individual enrolled in allergen immunotherapy.
+/// patientId is a human-readable identifier (e.g., PA-XXXXXXXX) auto-generated on creation.
+/// status progresses through: build-up → maintenance → complete (or inactive).
+/// Soft-deleted via deletedAt; all related allergens, vials, and schedules are preserved.
+/// Linked to Doctor for physician assignment; entity scoping is via entityId.
 model Patient {
   id             String    @id @default(cuid())
   name           String
@@ -85,6 +106,10 @@ model Patient {
   appointments    Appointment[]
 }
 
+/// Physician record representing a doctor at the clinic.
+/// Linked to Patient (one doctor → many patients) and optionally to AppUser
+/// for login account linkage. npi is the National Provider Identifier.
+/// Soft-deleted with active flag; patients retain doctorId even after doctor soft-delete.
 model Doctor {
   id             String          @id @default(cuid())
   name           String
@@ -106,6 +131,10 @@ model Doctor {
   patients Patient[]
 }
 
+/// Master allergen extract record representing a single antigen in the clinic's library.
+/// Types: mold | pollen | dust | animal | food | insect.
+/// stockConc is the stock concentration (e.g., "1:10" or "10,000 AU/mL").
+/// Allergens are added to patient-specific AllergenMix records for vial compounding.
 model Allergen {
   id           String    @id @default(cuid())
   name         String
@@ -120,6 +149,10 @@ model Allergen {
   mixes AllergenMix[]
 }
 
+/// Junction record linking a patient to a specific allergen with a prescribed volume.
+/// Represents one component of the patient's custom allergen extract formulation.
+/// volumeMl is the per-allergen volume added to the compounded vial series.
+/// Soft-deleted via deletedAt; safety validation runs against the full active mix.
 model AllergenMix {
   id         String    @id @default(cuid())
   patientId  String
@@ -131,6 +164,10 @@ model AllergenMix {
   allergen Allergen @relation(fields: [allergenId], references: [id])
 }
 
+/// Compounded allergen extract vial for a patient following the AAAI 4-vial dilution series.
+/// vialNumber 1–4 maps to: 1=Silver (1:10,000), 2=Blue (1:1,000), 3=Yellow (1:100), 4=Red (1:10).
+/// glycerinPercent must not exceed 50% per USP 797; standard clinical practice uses 10%.
+/// expiresAt is set to 90 days from compounding. colorCode drives visual display in the UI.
 model Vial {
   id              String    @id @default(cuid())
   patientId       String
@@ -147,6 +184,11 @@ model Vial {
   doses   DosingSchedule[]
 }
 
+/// Weekly injection dose record in a patient's immunotherapy buildup or maintenance schedule.
+/// weekNumber is sequential across the full treatment course (1–40+ weeks).
+/// phase: 'buildup' | 'maintenance'.
+/// administered is set true after the injection is given; administeredAt records exact time.
+/// reaction and notes capture clinical observations at the time of injection.
 model DosingSchedule {
   id             String    @id @default(cuid())
   patientId      String
@@ -164,6 +206,11 @@ model DosingSchedule {
   vial    Vial    @relation(fields: [vialId], references: [id])
 }
 
+/// Immutable audit trail entry for every create/update/delete action in the system.
+/// Written by all API routes after mutations; never updated or deleted.
+/// entity identifies the table/model affected (e.g., 'Patient', 'Vial', 'AppUser').
+/// patientId links the event to a patient when relevant, enabling per-patient audit history.
+/// Used for regulatory compliance, accreditation, and clinical accountability.
 model AuditLog {
   id        String   @id @default(cuid())
   patientId String?
@@ -176,6 +223,11 @@ model AuditLog {
   patient Patient? @relation(fields: [patientId], references: [id])
 }
 
+/// Scheduled clinical appointment for a patient.
+/// type: shot | skin_test | evaluation | follow_up | other.
+/// status lifecycle: scheduled → confirmed → completed | cancelled | no_show.
+/// Soft-deleted via deletedAt; cancellations should set status='cancelled' rather than delete.
+/// entityId scopes the appointment to a business entity.
 model Appointment {
   id        String    @id @default(cuid())
   patientId String
@@ -195,6 +247,10 @@ model Appointment {
   patient Patient @relation(fields: [patientId], references: [id])
 }
 
+/// Nursing or clinical support staff record (RN, LPN, MA, CMA, NP).
+/// Mirrors the Doctor model structure. npi is the National Provider Identifier (optional for MAs).
+/// Linked to AppUser via appUserId for login account association.
+/// Soft-deleted with active flag to preserve patient record history.
 model Nurse {
   id             String          @id @default(cuid())
   name           String
@@ -213,6 +269,10 @@ model Nurse {
   entity         BusinessEntity? @relation(fields: [entityId], references: [id])
 }
 
+/// Physical clinic location or branch office within a BusinessEntity.
+/// Used for patient assignment and user location-based access control.
+/// sortOrder controls display order in dropdowns (lower = first).
+/// Soft-deleted via deletedAt; UserLocationAccess records persist after deletion.
 model ClinicLocation {
   id             String               @id @default(cuid())
   name           String
@@ -227,6 +287,9 @@ model ClinicLocation {
   userAccess     UserLocationAccess[]
 }
 
+/// Configurable list of diagnosis codes shown in patient enrollment forms.
+/// icdCode stores the ICD-10 code (e.g., "J30.1" for allergic rhinitis).
+/// sortOrder controls dropdown display order. Managed via Settings → Diagnoses admin panel.
 model DiagnosisOption {
   id        String    @id @default(cuid())
   name      String
@@ -237,6 +300,8 @@ model DiagnosisOption {
   deletedAt DateTime?
 }
 
+/// Configurable list of physician credential titles (MD, DO, PhD, etc.).
+/// Shown in doctor creation forms. Managed via Settings admin panel.
 model DoctorTitle {
   id        String    @id @default(cuid())
   name      String
@@ -246,6 +311,8 @@ model DoctorTitle {
   deletedAt DateTime?
 }
 
+/// Configurable list of nursing credential titles (RN, LPN, MA, CMA, NP, etc.).
+/// Shown in nurse creation forms. Managed via Settings admin panel.
 model NurseTitle {
   id        String    @id @default(cuid())
   name      String
@@ -255,8 +322,9 @@ model NurseTitle {
   deletedAt DateTime?
 }
 
-// Pre-computed dashboard stats — updated whenever source tables change.
-// Dashboard API reads this single row instead of running 11 live queries.
+/// Pre-computed dashboard statistics singleton — updated whenever source tables change.
+/// Dashboard API reads this single row instead of running 11 live COUNT queries per request.
+/// The id is always 'singleton'; upserted via ON CONFLICT in refreshDashboardStats().
 model DashboardStats {
   id                  String   @id @default("singleton")
   totalPatients       Int      @default(0)

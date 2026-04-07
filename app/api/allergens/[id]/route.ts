@@ -11,6 +11,7 @@ import prisma from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/** @internal Normalizes a raw Prisma allergen record to the API response shape. */
 function shapeAllergen(a: {
   id: string;
   name: string;
@@ -32,6 +33,12 @@ function shapeAllergen(a: {
   };
 }
 
+/**
+ * Returns a single allergen by ID.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Allergen UUID
+ * @returns JSON { allergen } or 404
+ */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -47,6 +54,12 @@ export async function GET(
   }
 }
 
+/**
+ * Updates allergen fields. All fields are optional; only provided fields are changed.
+ * @param req - PUT request. Body: { name?, type?, manufacturer?, lotNumber?, stockConcentration?, expiryDate? }
+ * @param params.id - Allergen UUID
+ * @returns JSON { allergen } or error
+ */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,6 +91,12 @@ export async function PUT(
   }
 }
 
+/**
+ * Soft-deletes an allergen (sets deletedAt; data is retained).
+ * @param _req - Incoming request (unused)
+ * @param params.id - Allergen UUID
+ * @returns JSON { success: true } or 404/500
+ */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

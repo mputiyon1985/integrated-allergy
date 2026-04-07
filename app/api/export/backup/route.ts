@@ -1,8 +1,28 @@
+/**
+ * @file /api/export/backup — Full database JSON backup export
+ *
+ * @description
+ * Exports all non-deleted clinical data as a structured JSON file for backup,
+ * migration, or disaster recovery purposes. Includes patients, doctors, nurses,
+ * allergens, appointments, vials, dosing schedules, and recent audit logs.
+ *
+ * GET /api/export/backup
+ *   Returns a JSON file attachment with all active records.
+ *   File name: ims-backup-YYYY-MM-DD.json
+ *   Shape: { exportedAt, version, data: { patients[], doctors[], nurses[], ... } }
+ *
+ * @security Should be restricted to super_admin in production.
+ *           Contains full PII — handle with care.
+ */
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Exports a full JSON backup of all active clinical records.
+ * @returns JSON file download or 500 error
+ */
 export async function GET() {
   try {
     const [patients, doctors, nurses, allergens, appointments, auditLogs, vials, dosingSchedules] =

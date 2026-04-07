@@ -1,3 +1,11 @@
+/**
+ * @file app/doctors/page.tsx — Physician roster management page
+ *
+ * Displays, creates, edits, and toggles active status for doctor records.
+ * Features an inline add/edit form, active/inactive filter toggle, and
+ * a searchable table. Doctor credential titles are loaded from the Settings API
+ * (DoctorTitle model) with a hardcoded fallback list.
+ */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';

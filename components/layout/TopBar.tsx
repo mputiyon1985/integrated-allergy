@@ -1,20 +1,47 @@
+/**
+ * @file components/layout/TopBar.tsx — Page-level header with title, breadcrumbs, and actions
+ *
+ * Renders the horizontal top bar that appears at the top of every authenticated page.
+ * Contains:
+ * - Mobile hamburger menu button (triggers sidebar open via TopBarContext)
+ * - Page breadcrumb trail
+ * - Page title (h1)
+ * - Optional action buttons/elements (right-aligned)
+ *
+ * The onMenuClick handler can be provided directly or pulled from TopBarContext
+ * (set by ClientLayout). Pages pass title + actions; ClientLayout provides the menu trigger.
+ */
 'use client';
 
 import React from 'react';
 import { useTopBarContext } from './TopBarContext';
 
+/** A single item in the breadcrumb navigation trail. */
 interface BreadcrumbItem {
+  /** Display text for this breadcrumb segment */
   label: string;
+  /** Optional href — makes this segment a clickable link */
   href?: string;
 }
 
+/**
+ * Props for the TopBar component.
+ */
 interface TopBarProps {
+  /** Main page heading displayed in the top bar */
   title: string;
+  /** Optional breadcrumb trail shown above the title */
   breadcrumbs?: BreadcrumbItem[];
+  /** Optional React node (buttons, etc.) rendered on the right side */
   actions?: React.ReactNode;
+  /** Optional override for the mobile menu button handler (defaults to TopBarContext) */
   onMenuClick?: () => void;
 }
 
+/**
+ * Renders the page-level top bar with a mobile hamburger, breadcrumbs, title, and actions.
+ * Falls back to TopBarContext's onMenuClick if no explicit handler is provided.
+ */
 export default function TopBar({ title, breadcrumbs, actions, onMenuClick }: TopBarProps) {
   const ctx = useTopBarContext();
   const handleMenu = onMenuClick ?? ctx.onMenuClick;

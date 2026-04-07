@@ -1,3 +1,15 @@
+/**
+ * @file components/ui/SkeletonCard.tsx — Loading skeleton placeholder for KPI cards
+ *
+ * Renders an animated shimmer card used while dashboard KPI data is loading.
+ * Mirrors the visual structure of KpiCard (icon, label, value, subtitle areas).
+ * The `skeleton-shimmer` CSS animation is defined in globals.css.
+ */
+
+/**
+ * A shimmering placeholder card matching the KpiCard dimensions.
+ * @param height - Card height in pixels (default: 110)
+ */
 export function SkeletonCard({ height = 110 }: { height?: number }) {
   return (
     <div

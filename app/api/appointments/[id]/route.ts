@@ -21,6 +21,12 @@ type RouteParams = { params: Promise<{ id: string }> };
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Returns a single appointment with patient context.
+ * @param _req - Incoming request (unused)
+ * @param params.id - Appointment UUID
+ * @returns JSON { appointment } or 404
+ */
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
@@ -35,6 +41,12 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Updates appointment fields and logs the change to AuditLog.
+ * @param req - PUT request. Body (all optional): { type?, title?, startTime?, endTime?, provider?, notes?, status? }
+ * @param params.id - Appointment UUID
+ * @returns JSON { appointment } or error
+ */
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
@@ -78,6 +90,12 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Soft-deletes an appointment (sets deletedAt; data is retained).
+ * @param _req - Incoming request (unused)
+ * @param params.id - Appointment UUID
+ * @returns JSON { success: true } or 404/500
+ */
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {

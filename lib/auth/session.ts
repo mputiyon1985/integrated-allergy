@@ -1,3 +1,18 @@
+/**
+ * @file lib/auth/session.ts — JWT session management for the Integrated Allergy IMS
+ *
+ * @description
+ * Handles creation, verification, and lifecycle of user sessions.
+ * Sessions are stored as signed JWT tokens in an httpOnly cookie (ia_session).
+ *
+ * Two token types are used:
+ * - **Session JWT** (8h expiry): Full user context; set after successful login + MFA.
+ * - **Temp JWT** (30m expiry): Used during MFA flow (mfa_verify or mfa_setup step)
+ *   before the full session is established.
+ *
+ * Role-based helpers (canAccessEntity, canAccessLocation, isEntityAdmin, isSuperAdmin)
+ * are used by API routes to enforce authorization after authentication.
+ */
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
@@ -27,6 +42,11 @@ export interface TempTokenPayload {
   purpose: 'mfa_verify' | 'mfa_setup';
 }
 
+/**
+ * Signs a full session JWT containing the user's context (role, locations, identity).
+ * @param user - The authenticated user's context to embed in the token
+ * @returns A signed JWT string (HS256, 8h expiry)
+ */
 export async function signSessionJWT(user: UserContext): Promise<string> {
   return new SignJWT({ ...user })
     .setProtectedHeader({ alg: 'HS256' })
@@ -35,6 +55,11 @@ export async function signSessionJWT(user: UserContext): Promise<string> {
     .sign(JWT_SECRET);
 }
 
+/**
+ * Signs a short-lived temporary JWT used during the MFA authentication flow.
+ * @param payload - The userId and purpose ('mfa_verify' | 'mfa_setup')
+ * @returns A signed JWT string (HS256, 30m expiry)
+ */
 export async function signTempJWT(payload: TempTokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
@@ -43,6 +68,11 @@ export async function signTempJWT(payload: TempTokenPayload): Promise<string> {
     .sign(JWT_SECRET);
 }
 
+/**
+ * Verifies and decodes any JWT signed by this application.
+ * @param token - The raw JWT string to verify
+ * @returns The decoded payload typed as T, or null if invalid/expired
+ */
 export async function verifyJWT<T>(token: string): Promise<T | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
@@ -52,6 +82,10 @@ export async function verifyJWT<T>(token: string): Promise<T | null> {
   }
 }
 
+/**
+ * Signs a session JWT and sets it as an httpOnly cookie on the response.
+ * @param user - The authenticated user context to encode in the session
+ */
 export async function setSessionCookie(user: UserContext): Promise<void> {
   const token = await signSessionJWT(user);
   const cookieStore = await cookies();
@@ -64,11 +98,19 @@ export async function setSessionCookie(user: UserContext): Promise<void> {
   });
 }
 
+/**
+ * Removes the ia_session cookie, effectively logging the user out.
+ */
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }
 
+/**
+ * Verifies the ia_session cookie and returns the user context if valid.
+ * @param req - Optional NextRequest; if omitted, reads from the Next.js cookie store (Server Component context)
+ * @returns The decoded UserContext, or null if the session is absent/expired/invalid
+ */
 export async function verifySession(req?: NextRequest): Promise<UserContext | null> {
   let token: string | undefined;
 
@@ -85,6 +127,12 @@ export async function verifySession(req?: NextRequest): Promise<UserContext | nu
   return payload;
 }
 
+/**
+ * Verifies the session and throws if unauthenticated. Use in API routes that require login.
+ * @param req - Optional NextRequest for reading cookies in API route context
+ * @returns The authenticated UserContext
+ * @throws Error('Unauthorized') if no valid session exists
+ */
 export async function requireAuth(req?: NextRequest): Promise<UserContext> {
   const user = await verifySession(req);
   if (!user) {
@@ -93,21 +141,42 @@ export async function requireAuth(req?: NextRequest): Promise<UserContext> {
   return user;
 }
 
+/**
+ * Returns true if the user is allowed to access data belonging to the given entity.
+ * super_admin can access all entities; other roles can only access their own.
+ * @param user - The authenticated user context
+ * @param entityId - The entity ID to check access for
+ */
 export function canAccessEntity(user: UserContext, entityId: string): boolean {
   if (user.role === 'super_admin') return true;
   return user.entityId === entityId;
 }
 
+/**
+ * Returns true if the user is allowed to access data for the given clinic location.
+ * super_admin and entity_admin can access all locations; location_staff is restricted
+ * to their assigned locations via UserLocationAccess.
+ * @param user - The authenticated user context
+ * @param locationId - The location ID to check access for
+ */
 export function canAccessLocation(user: UserContext, locationId: string): boolean {
   if (user.role === 'super_admin') return true;
   if (user.role === 'entity_admin') return true; // entity_admin can access all locations within entity
   return user.locationIds.includes(locationId);
 }
 
+/**
+ * Returns true if the user has entity-level admin privileges (entity_admin or super_admin).
+ * @param user - The authenticated user context
+ */
 export function isEntityAdmin(user: UserContext): boolean {
   return user.role === 'entity_admin' || user.role === 'super_admin';
 }
 
+/**
+ * Returns true if the user is a super administrator with full system access.
+ * @param user - The authenticated user context
+ */
 export function isSuperAdmin(user: UserContext): boolean {
   return user.role === 'super_admin';
 }
