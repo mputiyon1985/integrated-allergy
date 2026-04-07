@@ -32,6 +32,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# Local dev database - never commit
+dev.db
+*.db
+prisma/*.db
 
 # vercel
 .vercel
