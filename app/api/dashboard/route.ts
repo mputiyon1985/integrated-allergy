@@ -21,11 +21,21 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
-
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+
+// In-memory cache — skips all 11 DB queries on warm lambda hits
+let cachedPayload: Record<string, unknown> | null = null;
+let cacheExpiresAt = 0;
+const CACHE_TTL_MS = 30_000;
 
 export async function GET() {
+  const now = Date.now();
+  if (cachedPayload && now < cacheExpiresAt) {
+    return NextResponse.json(cachedPayload, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60', 'X-Cache': 'HIT' },
+    });
+  }
+
   try {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -120,7 +130,7 @@ export async function GET() {
       user: 'System',
     }));
 
-    return NextResponse.json({
+    const payload = {
       stats: {
         totalPatients,
         activeTreatments: activeVials,
@@ -134,8 +144,13 @@ export async function GET() {
         activeNurses,
       },
       activity,
-    }, {
-      headers: { 'Cache-Control': 'no-store' },
+    };
+
+    cachedPayload = payload;
+    cacheExpiresAt = Date.now() + CACHE_TTL_MS;
+
+    return NextResponse.json(payload, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60', 'X-Cache': 'MISS' },
     });
   } catch (err) {
     console.error('Dashboard API error:', err);
