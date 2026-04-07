@@ -14,13 +14,24 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!isAuthPage) {
       // Fire in background — don't await, just warm the connection + CDN cache
+      // Round 1 — DB warm-up + most critical pages
       Promise.allSettled([
         fetch('/api/ping', { cache: 'no-store' }),
         fetch('/api/dashboard', { cache: 'no-store' }),
         fetch('/api/patients?limit=50', { cache: 'default' }),
         fetch('/api/doctors?active=true', { cache: 'default' }),
         fetch('/api/nurses?active=true', { cache: 'default' }),
-      ]).catch(() => {});
+      ]).then(() => {
+        // Round 2 — secondary pages, after DB is warm
+        Promise.allSettled([
+          fetch('/api/settings', { cache: 'default' }),
+          fetch('/api/allergens', { cache: 'default' }),
+          fetch('/api/locations?active=true', { cache: 'default' }),
+          fetch('/api/diagnoses?active=true', { cache: 'default' }),
+          fetch('/api/doctor-titles?active=true', { cache: 'default' }),
+          fetch('/api/nurse-titles?active=true', { cache: 'default' }),
+        ]).catch(() => {});
+      }).catch(() => {});
     }
   }, [isAuthPage]);
 

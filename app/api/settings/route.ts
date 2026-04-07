@@ -19,7 +19,9 @@ export async function GET() {
     for (const row of rows) {
       result[row.key] = row.value;
     }
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' },
+    });
   } catch (err) {
     console.error('GET /api/settings error:', err);
     // Return defaults if table doesn't exist yet
