@@ -7,6 +7,24 @@
 
 Integrated Allergy IMS handles Protected Health Information (PHI) and is subject to HIPAA Security Rule (45 CFR Part 164) requirements. This document outlines what PHI is stored, the security controls currently in place, required Business Associate Agreements (BAAs), remaining steps before production deployment, and the security contact.
 
+### Compliance Status
+
+| Area | Status | Notes |
+|---|---|---|
+| Authentication & MFA | ✅ Active | bcrypt + TOTP MFA enforced |
+| Role-Based Access Control | ✅ Active | super_admin, entity_admin, location_staff |
+| Session Management | ✅ Active | Signed JWT, 8hr expiry, cookie-based |
+| Audit Logging | ✅ Active | All PHI mutations + exports logged |
+| Rate Limiting | ✅ Active | DB-backed, survives cold starts |
+| PHI Security Headers | ✅ Active | no-store, no-referrer, nosniff, DENY |
+| Soft Delete (data retention) | ✅ Active | No hard deletes on PHI |
+| Secrets Management | ✅ Active | No secrets in git, env vars only |
+| Encryption in Transit | ✅ Active | HTTPS enforced via Vercel |
+| Encryption at Rest | ⚠️ Pending | Requires DB-level config (Turso/Neon) |
+| BAA — Vercel | ⚠️ Pending | Requires Vercel Enterprise plan |
+| BAA — Database Vendor | ⚠️ Pending | Turso or Neon BAA required |
+| Penetration Testing | ⚠️ Pending | Required before production launch |
+
 ---
 
 ## PHI Stored
