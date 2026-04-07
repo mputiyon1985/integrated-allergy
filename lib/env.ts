@@ -15,10 +15,14 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 
-// Validate on import — throws with clear message if misconfigured
-const _env = envSchema.safeParse(process.env);
+// Only validate at runtime (not during next build) — DATABASE_URL not available at build time
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
 
-if (!_env.success) {
+const _env = isBuildTime
+  ? { success: true as const, data: { DATABASE_URL: '', JWT_SECRET: undefined, NODE_ENV: 'production' as const } }
+  : envSchema.safeParse(process.env);
+
+if (!isBuildTime && !_env.success && 'error' in _env) {
   console.error('❌ Invalid environment variables:');
   console.error(_env.error.flatten().fieldErrors);
   if (process.env.NODE_ENV === 'production') {
