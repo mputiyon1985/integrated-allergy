@@ -14,6 +14,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 import { nanoid } from 'nanoid';
 
 export const dynamic = 'force-dynamic';
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    void refreshDashboardStats(); // fire-and-forget — update stats table in background
     return NextResponse.json(
       {
         id: patient.id,

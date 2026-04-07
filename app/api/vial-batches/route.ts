@@ -18,6 +18,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 import { validateAllergenMix, validateGlycerin } from '@/lib/clinical/safety';
 
 interface AllergenPayload {

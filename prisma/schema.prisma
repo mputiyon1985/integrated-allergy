@@ -254,3 +254,20 @@ model NurseTitle {
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 }
+
+// Pre-computed dashboard stats — updated whenever source tables change.
+// Dashboard API reads this single row instead of running 11 live queries.
+model DashboardStats {
+  id                  String   @id @default("singleton")
+  totalPatients       Int      @default(0)
+  activeTreatments    Int      @default(0)
+  vialsExpiringSoon   Int      @default(0)
+  vialsExpiring7Days  Int      @default(0)
+  dosesThisWeek       Int      @default(0)
+  shotsToday          Int      @default(0)
+  testsToday          Int      @default(0)
+  evalsToday          Int      @default(0)
+  activeDoctors       Int      @default(0)
+  activeNurses        Int      @default(0)
+  updatedAt           DateTime @updatedAt
+}

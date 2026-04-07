@@ -15,6 +15,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { refreshDashboardStats } from '@/lib/refreshDashboardStats';
 
 
 export const dynamic = 'force-dynamic';
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    void refreshDashboardStats();
     return NextResponse.json({ nurse }, { status: 201 });
   } catch (err) {
     console.error('POST /api/nurses error:', err);

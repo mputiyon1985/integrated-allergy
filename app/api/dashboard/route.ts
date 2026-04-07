@@ -23,18 +23,51 @@ import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// In-memory cache — skips all 11 DB queries on warm lambda hits
+// In-memory cache — skips DB on warm lambda hits
 let cachedPayload: Record<string, unknown> | null = null;
 let cacheExpiresAt = 0;
 const CACHE_TTL_MS = 30_000;
 
 export async function GET() {
-  const now = Date.now();
-  if (cachedPayload && now < cacheExpiresAt) {
+  const nowMs = Date.now();
+  if (cachedPayload && nowMs < cacheExpiresAt) {
     return NextResponse.json(cachedPayload, {
       headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60', 'X-Cache': 'HIT' },
     });
   }
+
+  try {
+    // Fast path: read pre-computed stats row (single DB query)
+    try {
+      const statsRows = await prisma.$queryRaw<Array<{
+        totalPatients: number; activeTreatments: number; vialsExpiringSoon: number;
+        vialsExpiring7Days: number; dosesThisWeek: number; shotsToday: number;
+        testsToday: number; evalsToday: number; activeDoctors: number; activeNurses: number;
+        updatedAt: string;
+      }>>`SELECT * FROM "DashboardStats" WHERE id = 'singleton' LIMIT 1`;
+
+      if (statsRows.length > 0) {
+        const s = statsRows[0];
+        const recentLogs = await prisma.auditLog.findMany({
+          orderBy: { createdAt: 'desc' }, take: 20,
+          include: { patient: { select: { name: true, patientId: true } } },
+        });
+        const activity = recentLogs.map((log) => ({
+          id: log.id,
+          timestamp: log.createdAt.toISOString().replace('T', ' ').slice(0, 16),
+          type: log.action, patient: log.patient ? log.patient.name : '—',
+          details: log.details ?? '', user: 'System',
+        }));
+        const payload = { stats: { ...s, updatedAt: undefined }, activity };
+        cachedPayload = payload;
+        cacheExpiresAt = nowMs + CACHE_TTL_MS;
+        return NextResponse.json(payload, {
+          headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60', 'X-Cache': 'STATS' },
+        });
+      }
+    } catch {
+      // DashboardStats table not yet created — fall through to live queries
+    }
 
   try {
     const now = new Date();
@@ -152,6 +185,10 @@ export async function GET() {
     return NextResponse.json(payload, {
       headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60', 'X-Cache': 'MISS' },
     });
+  } catch (err) {
+    console.error('Dashboard API error:', err);
+    return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 });
+  }
   } catch (err) {
     console.error('Dashboard API error:', err);
     return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 });
