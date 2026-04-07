@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
       include: { patient: { select: { id: true, name: true, patientId: true } } },
     });
 
-    return NextResponse.json({ appointments });
+    return NextResponse.json({ appointments }, {
+      headers: { 'Cache-Control': 'public, max-age=15, stale-while-revalidate=30' },
+    });
   } catch (err) {
     console.error('GET /api/appointments error:', err);
     return NextResponse.json({ appointments: [] });

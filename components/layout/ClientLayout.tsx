@@ -10,10 +10,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname?.startsWith('/login');
 
-  // Warm up DB connection on app load so first nav feels fast
+  // Warm up DB connection + pre-cache the most-visited pages on app load
   useEffect(() => {
     if (!isAuthPage) {
-      fetch('/api/ping', { cache: 'no-store' }).catch(() => {});
+      // Fire in background — don't await, just warm the connection + CDN cache
+      Promise.allSettled([
+        fetch('/api/ping', { cache: 'no-store' }),
+        fetch('/api/dashboard', { cache: 'no-store' }),
+        fetch('/api/patients?limit=50', { cache: 'default' }),
+        fetch('/api/doctors?active=true', { cache: 'default' }),
+        fetch('/api/nurses?active=true', { cache: 'default' }),
+      ]).catch(() => {});
     }
   }, [isAuthPage]);
 
