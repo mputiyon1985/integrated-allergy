@@ -36,7 +36,9 @@ export async function GET() {
       expiryDate: a.expiresAt ? a.expiresAt.toISOString().slice(0, 10) : '',
       inStock: a.expiresAt ? a.expiresAt > new Date() : true,
     }));
-    return NextResponse.json({ allergens: shaped });
+    return NextResponse.json({ allergens: shaped }, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' },
+    });
   } catch {
     return NextResponse.json({ allergens: [] });
   }

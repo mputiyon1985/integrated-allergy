@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
       where: activeOnly ? { active: true, deletedAt: null } : { deletedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
-    return NextResponse.json({ titles });
+    return NextResponse.json({ titles }, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' },
+    });
   } catch (err) {
     console.error('GET /api/doctor-titles error:', err);
     return NextResponse.json({ titles: [] });

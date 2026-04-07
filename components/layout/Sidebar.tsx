@@ -3,7 +3,21 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+// Map each nav route to the API endpoints it needs on load
+const ROUTE_PREFETCH_URLS: Record<string, string[]> = {
+  '/dashboard':  ['/api/dashboard'],
+  '/patients':   ['/api/patients'],
+  '/calendar':   ['/api/appointments'],
+  '/doctors':    ['/api/doctors'],
+  '/nurses':     ['/api/nurses'],
+  '/vial-prep':  ['/api/vial-batches'],
+  '/dosing':     ['/api/patients', '/api/doctors'],
+  '/allergens':  ['/api/allergens'],
+  '/settings':   ['/api/settings'],
+  '/users':      ['/api/users'],
+};
 
 interface AuthMe {
   user: { role: string; name: string; doctorName: string | null; nurseTitle: string | null } | null;
@@ -161,6 +175,18 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
     return pathname.startsWith(href);
   };
 
+  // Prefetch API data on nav hover so it's warm when the page renders
+  const prefetchedRef = useRef<Set<string>>(new Set());
+  const prefetchRoute = useCallback((href: string) => {
+    const urls = ROUTE_PREFETCH_URLS[href];
+    if (!urls) return;
+    for (const url of urls) {
+      if (prefetchedRef.current.has(url)) continue;
+      prefetchedRef.current.add(url);
+      fetch(url, { cache: 'default' }).catch(() => {});
+    }
+  }, []);
+
   const settingsActive = isActive('/settings');
 
   return (
@@ -225,7 +251,10 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
                 borderLeft: active ? '3px solid #4db8ff' : '3px solid transparent',
                 transition: 'background 0.15s, color 0.15s',
               }}
-              onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = '#e8f9f7'; }}
+              onMouseEnter={(e) => {
+                if (!active) (e.currentTarget as HTMLAnchorElement).style.background = '#e8f9f7';
+                prefetchRoute(item.href);
+              }}
               onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
               onClick={onClose}
             >
@@ -337,7 +366,7 @@ export default function Sidebar({ onClose }: SidebarProps = {}) {
             borderLeft: settingsActive ? '3px solid #4db8ff' : '3px solid transparent',
             transition: 'background 0.15s',
           }}
-          onMouseEnter={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = '#f3f4f6'; }}
+          onMouseEnter={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = '#f3f4f6'; prefetchRoute('/settings'); }}
           onMouseLeave={(e) => { if (!settingsActive) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
           onClick={onClose}
         >

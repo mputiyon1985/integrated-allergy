@@ -54,7 +54,9 @@ export async function GET(req: NextRequest) {
       startDate: p.startDate.toISOString().slice(0, 10),
       status: STATUS_DISPLAY[p.status] ?? 'Build-Up',
     }));
-    return NextResponse.json({ patients: shaped, page, limit, total });
+    return NextResponse.json({ patients: shaped, page, limit, total }, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (err) {
     console.error('GET /api/patients error:', err);
     return NextResponse.json({ error: 'Failed to fetch patients' }, { status: 500 });

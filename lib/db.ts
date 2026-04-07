@@ -10,11 +10,15 @@ function createPrismaClient() {
   // Pass auth token to PrismaLibSql for Turso remote databases
   const adapterConfig = authToken ? { url, authToken } : { url }
   const adapter = new PrismaLibSql(adapterConfig)
-  return new PrismaClient({ adapter })
+  // log: [] suppresses verbose query/info logs in production
+  return new PrismaClient({ adapter, log: [] })
 }
 
+// Singleton: reuse the client across warm serverless invocations in all environments.
+// Without this, every cold start in production creates a new connection pool.
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Always persist to global (not just dev) so Vercel warm lambdas reuse the connection.
+globalForPrisma.prisma = prisma
 
 export default prisma

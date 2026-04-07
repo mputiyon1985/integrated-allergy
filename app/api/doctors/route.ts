@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
-    return NextResponse.json({ doctors });
+    return NextResponse.json({ doctors }, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' },
+    });
   } catch (err) {
     console.error('GET /api/doctors error:', err);
     return NextResponse.json({ doctors: [] });

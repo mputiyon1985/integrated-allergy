@@ -29,7 +29,9 @@ export async function GET(req: NextRequest) {
         entity: { select: { id: true, name: true } },
       },
     });
-    return NextResponse.json({ locations });
+    return NextResponse.json({ locations }, {
+      headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' },
+    });
   } catch (err) {
     console.error('GET /api/locations error:', err);
     return NextResponse.json({ locations: [] });
